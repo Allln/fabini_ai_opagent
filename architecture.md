@@ -215,8 +215,8 @@ readability feature for the POC, not a general-purpose knowledge graph.
 
 The complete workflows are shown in:
 
-- [Deterministic mock: fixed investigation sequence](poc-flow-deterministic.svg)
-- [Gemini mode: model-selected tool loop](poc-flow-gemini.svg)
+- [Deterministic mock: fixed investigation sequence](src/poc-flow-deterministic.svg)
+- [Gemini mode: model-selected tool loop](src/poc-flow-gemini.svg)
 
 ## Local host usage
 

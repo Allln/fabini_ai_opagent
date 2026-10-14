@@ -35,8 +35,8 @@ synchronization, and action state readable at a glance.
 
 See the full workflow diagrams:
 
-- [Deterministic mock: fixed investigation sequence](poc-flow-deterministic.svg)
-- [Gemini mode: model-selected tool loop](poc-flow-gemini.svg)
+- [Deterministic mock: fixed investigation sequence](src/poc-flow-deterministic.svg)
+- [Gemini mode: model-selected tool loop](src/poc-flow-gemini.svg)
 
 ## Scenario 1 — successful diagnosis, no side effect
 

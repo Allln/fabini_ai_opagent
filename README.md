@@ -46,20 +46,20 @@ Gemini results are model-dependent; the observed manual runs are recorded in
 
 ## Architecture and decisions
 
-- [app/main.py](app/main.py) exposes the FastAPI API and serves the browser UI.
-- [app/agent/adapters.py](app/agent/adapters.py) provides Gemini and
+- [app/main.py](src/app/main.py) exposes the FastAPI API and serves the browser UI.
+- [app/agent/adapters.py](src/app/agent/adapters.py) provides Gemini and
   deterministic mock adapters behind one interface.
-- [app/agent/policy.py](app/agent/policy.py) centralizes explicit action-intent
+- [app/agent/policy.py](src/app/agent/policy.py) centralizes explicit action-intent
   detection shared by the adapters and host.
-- [app/agent/orchestrator.py](app/agent/orchestrator.py) owns the bounded
+- [app/agent/orchestrator.py](src/app/agent/orchestrator.py) owns the bounded
   multi-step loop, approvals, idempotency, and structured outcomes.
-- [app/tools/registry.py](app/tools/registry.py) validates and executes the
+- [app/tools/registry.py](src/app/tools/registry.py) validates and executes the
   seven tools:
   `get_order`, `get_payment`, `get_fulfillment`, `get_sync_logs`,
   `get_order_audit`, `retry_sync`, and `create_ticket`.
-- [app/db/repository.py](app/db/repository.py) persists runs, events, tool
+- [app/db/repository.py](src/app/db/repository.py) persists runs, events, tool
   calls, and approvals in SQLite.
-- [app/config.py](app/config.py) centralizes runtime defaults and small policy
+- [app/config.py](src/app/config.py) centralizes runtime defaults and small policy
   constants, including the Gemini system instruction.
 
 Read-only `get_*` tools run automatically. `retry_sync` and `create_ticket`
@@ -87,8 +87,8 @@ knowledge store or agent decision layer.
 
 Workflow diagrams:
 
-- [Deterministic mock: fixed investigation sequence](poc-flow-deterministic.svg)
-- [Gemini mode: model-selected tool loop](poc-flow-gemini.svg)
+- [Deterministic mock: fixed investigation sequence](src/poc-flow-deterministic.svg)
+- [Gemini mode: model-selected tool loop](src/poc-flow-gemini.svg)
 
 ## Deterministic mock data
 
