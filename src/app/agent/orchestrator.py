@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from app.agent.adapters import AgentModel, GeminiAgentModel, MockAgentModel
 from app.config import APPROVAL_TIMEOUT_MINUTES, Settings
 from app.db.repository import SQLiteRepository
+from app.errors import ToolExecutionError
 from app.models import (
     AgentRunResult,
     AgentStep,
@@ -34,6 +35,8 @@ class RunSession:
     next_event: int = 1
     pending_approval_id: UUID | None = None
     pending_action: ToolCallRequest | None = None
+    pending_calls: list[ToolCallRequest] = field(default_factory=list)
+    pending_results: list[ToolResult] = field(default_factory=list)
     used_action_keys: set[str] = field(default_factory=set)
 
 
@@ -125,15 +128,26 @@ class AgentOrchestrator:
             raise RuntimeError("Approval does not have a pending action")
         self._transition_approval(session, approval, ApprovalStatus.APPROVED)
         action = session.pending_action
+        pending_calls = session.pending_calls
+        pending_results = session.pending_results
         session.pending_action = None
         session.pending_approval_id = None
+        session.pending_calls = []
+        session.pending_results = []
         session.used_action_keys.add(self.registry.action_key(action))
         result = self._execute_and_record(session, action)
         if result.ok:
             self._transition_approval(session, approval, ApprovalStatus.EXECUTED)
         else:
             self._transition_approval(session, approval, ApprovalStatus.FAILED)
-        return self._advance(session, session.model.submit_tool_results([result]))
+        pending_results.append(result)
+        next_turn = self._process_tool_calls(session, pending_calls, pending_results)
+        if next_turn is None:
+            return self._save(session)
+        try:
+            return self._advance(session, next_turn)
+        except (RuntimeError, ValueError, ImportError) as exc:
+            return self._fail(session, str(exc))
 
     def get_result(self, run_id: UUID) -> AgentRunResult | None:
         session = self.sessions.get(run_id)
@@ -168,62 +182,78 @@ class AgentOrchestrator:
             if turn.text:
                 self._step(session, "model", turn.text)
             if not turn.tool_calls:
-                session.result.status = RunStatus.COMPLETED
+                session.result.status = (
+                    RunStatus.FAILED if session.result.errors else RunStatus.COMPLETED
+                )
                 session.result.summary = turn.text or "The agent completed without a summary."
                 return self._save(session)
 
-            results: list[ToolResult] = []
-            for call in turn.tool_calls:
-                try:
-                    definition = self.registry.get(call.name)
-                except KeyError:
-                    result = ToolResult(
-                        name=call.name,
-                        call_id=call.call_id,
-                        ok=False,
-                        error=f"Unknown tool: {call.name}",
-                        status=ToolCallStatus.FAILED,
-                    )
-                    results.append(result)
-                    self._record_tool_failure(session, call, result)
-                    continue
-                action_key = self.registry.action_key(call)
-                if definition.side_effecting and action_key not in session.used_action_keys:
-                    approval = ApprovalRecord(
-                        id=uuid4(),
-                        action_key=action_key,
-                        tool_name=call.name,
-                        arguments=call.arguments,
-                        status=ApprovalStatus.PENDING,
-                        created_at=utc_now(),
-                    )
-                    session.result.approvals.append(approval)
-                    session.pending_approval_id = approval.id
-                    session.pending_action = call
-                    session.result.proposed_actions.append(f"{call.name} with {call.arguments}")
-                    session.result.status = RunStatus.WAITING_APPROVAL
-                    self.repository.create_approval(approval, session.result.run_id)
-                    self._step(
-                        session,
-                        "approval_requested",
-                        f"Approval required before {call.name}.",
-                        {"approval_id": str(approval.id), "tool": call.name},
-                    )
-                    return self._save(session)
-                if definition.side_effecting:
-                    results.append(
-                        ToolResult(
-                            name=call.name,
-                            call_id=call.call_id,
-                            ok=False,
-                            error="Duplicate side effect blocked by idempotency policy",
-                            status=ToolCallStatus.REJECTED,
-                        )
-                    )
-                else:
-                    results.append(self._execute_and_record(session, call))
+            next_turn = self._process_tool_calls(session, turn.tool_calls, [])
+            if next_turn is None:
+                return self._save(session)
+            turn = next_turn
 
-            turn = session.model.submit_tool_results(results)
+    def _process_tool_calls(
+        self,
+        session: RunSession,
+        calls: list[ToolCallRequest],
+        results: list[ToolResult],
+    ) -> ModelTurn | None:
+        for index, raw_call in enumerate(calls):
+            try:
+                definition, arguments = self.registry.validate(raw_call)
+            except ToolExecutionError as exc:
+                result = ToolResult(
+                    name=raw_call.name,
+                    call_id=raw_call.call_id,
+                    ok=False,
+                    error=str(exc),
+                    status=ToolCallStatus.FAILED,
+                )
+                results.append(result)
+                self._record_tool_failure(session, raw_call, result)
+                continue
+
+            call = raw_call.model_copy(update={"arguments": arguments})
+            action_key = self.registry.action_key(call)
+            if definition.side_effecting and action_key not in session.used_action_keys:
+                approval = ApprovalRecord(
+                    id=uuid4(),
+                    action_key=action_key,
+                    tool_name=call.name,
+                    arguments=call.arguments,
+                    status=ApprovalStatus.PENDING,
+                    created_at=utc_now(),
+                )
+                session.result.approvals.append(approval)
+                session.pending_approval_id = approval.id
+                session.pending_action = call
+                session.pending_calls = calls[index + 1 :]
+                session.pending_results = results
+                session.result.proposed_actions.append(f"{call.name} with {call.arguments}")
+                session.result.status = RunStatus.WAITING_APPROVAL
+                self.repository.create_approval(approval, session.result.run_id)
+                self._step(
+                    session,
+                    "approval_requested",
+                    f"Approval required before {call.name}.",
+                    {"approval_id": str(approval.id), "tool": call.name},
+                )
+                return None
+            if definition.side_effecting:
+                result = ToolResult(
+                    name=call.name,
+                    call_id=call.call_id,
+                    ok=False,
+                    error="Duplicate side effect blocked by idempotency policy",
+                    status=ToolCallStatus.REJECTED,
+                )
+                results.append(result)
+                self._record_tool_failure(session, call, result)
+            else:
+                results.append(self._execute_and_record(session, call))
+
+        return session.model.submit_tool_results(results)
 
     def _execute_and_record(self, session: RunSession, call: ToolCallRequest) -> ToolResult:
         started = utc_now()
@@ -335,7 +365,7 @@ class AgentOrchestrator:
         session: RunSession,
         kind: str,
         message: str,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         step = AgentStep(
             sequence=session.next_step,
@@ -348,7 +378,12 @@ class AgentOrchestrator:
         session.result.steps.append(step)
         self._event(session, kind, {"message": message, **step.metadata})
 
-    def _event(self, session: RunSession, event_type: str, payload: dict) -> None:
+    def _event(
+        self,
+        session: RunSession,
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> None:
         self.repository.append_event(
             session.result.run_id,
             sequence=session.next_event,

@@ -100,7 +100,7 @@ MOCK_SYNC_LOGS: dict[str, list[dict[str, Any]]] = {
 _CREATED_TICKETS: dict[str, dict[str, Any]] = {}
 
 
-def _find(mapping: dict[str, Any], order_id: str, label: str) -> Any:
+def _find[ToolValue](mapping: dict[str, ToolValue], order_id: str, label: str) -> ToolValue:
     try:
         return mapping[order_id]
     except KeyError as exc:
@@ -236,7 +236,7 @@ class ToolRegistry:
 
         attempts = 1 if definition.side_effecting else READ_ONLY_TOOL_MAX_ATTEMPTS
         last_error: str | None = None
-        for _attempt in range(attempts):
+        for _ in range(attempts):
             executor = ThreadPoolExecutor(max_workers=1)
             future = executor.submit(definition.handler, arguments)
             try:
@@ -254,7 +254,7 @@ class ToolRegistry:
             except ToolExecutionError as exc:
                 last_error = str(exc)
                 executor.shutdown(wait=True, cancel_futures=True)
-            except (KeyError, RuntimeError, ValueError) as exc:
+            except Exception as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
                 executor.shutdown(wait=True, cancel_futures=True)
             else:

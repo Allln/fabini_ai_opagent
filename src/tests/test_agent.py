@@ -1,7 +1,16 @@
+from dataclasses import replace
+
 from app.agent.orchestrator import AgentOrchestrator
 from app.config import Settings
 from app.db.repository import SQLiteRepository
-from app.models import ApprovalStatus, RunRequest, RunStatus, ToolCallRequest, ToolCallStatus
+from app.models import (
+    ApprovalStatus,
+    ModelTurn,
+    RunRequest,
+    RunStatus,
+    ToolCallRequest,
+    ToolCallStatus,
+)
 from app.tools.registry import ToolRegistry
 
 
@@ -63,6 +72,101 @@ def test_side_effect_pauses_then_executes_after_approval() -> None:
     assert completed.status is RunStatus.COMPLETED
     assert completed.approvals[0].status is ApprovalStatus.EXECUTED
     assert [call.name for call in completed.tool_calls][-1] == "retry_sync"
+
+
+def test_negated_side_effect_request_does_not_trigger_approval() -> None:
+    orchestrator = build_orchestrator()
+
+    result = orchestrator.start(
+        RunRequest(request="Investigate order 100245, but do not retry synchronization.")
+    )
+
+    assert result.status is RunStatus.COMPLETED
+    assert result.approvals == []
+    assert [call.name for call in result.tool_calls] == [
+        "get_order",
+        "get_payment",
+        "get_fulfillment",
+        "get_sync_logs",
+        "get_order_audit",
+    ]
+
+
+def test_batched_tool_calls_resume_in_order_after_approval() -> None:
+    class BatchedModel:
+        def start(self, request: str) -> ModelTurn:
+            return ModelTurn(
+                tool_calls=[
+                    ToolCallRequest(name="get_order", arguments={"order_id": "100245"}),
+                    ToolCallRequest(name="retry_sync", arguments={"order_id": "100245"}),
+                    ToolCallRequest(name="get_payment", arguments={"order_id": "100245"}),
+                ]
+            )
+
+        def submit_tool_results(self, results: list) -> ModelTurn:
+            return ModelTurn(text=f"Received {len(results)} tool results.")
+
+    orchestrator = build_orchestrator()
+    orchestrator._create_model = lambda _mode: BatchedModel()
+
+    waiting = orchestrator.start(RunRequest(request="Run the prepared investigation."))
+    completed = orchestrator.resolve_approval(
+        waiting.run_id,
+        waiting.approvals[0].id,
+        "approve",
+    )
+
+    assert completed.status is RunStatus.COMPLETED
+    assert [call.name for call in completed.tool_calls] == [
+        "get_order",
+        "retry_sync",
+        "get_payment",
+    ]
+
+
+def test_invalid_side_effect_arguments_do_not_create_approval() -> None:
+    class InvalidActionModel:
+        def start(self, request: str) -> ModelTurn:
+            return ModelTurn(
+                tool_calls=[
+                    ToolCallRequest(
+                        name="create_ticket",
+                        arguments={"description": ""},
+                    )
+                ]
+            )
+
+        def submit_tool_results(self, results: list) -> ModelTurn:
+            return ModelTurn(text="The requested action had invalid arguments.")
+
+    orchestrator = build_orchestrator()
+    orchestrator._create_model = lambda _mode: InvalidActionModel()
+
+    result = orchestrator.start(RunRequest(request="Create a ticket."))
+
+    assert result.status is RunStatus.FAILED
+    assert result.approvals == []
+    assert result.tool_calls[0].name == "create_ticket"
+    assert result.tool_calls[0].status is ToolCallStatus.FAILED
+
+
+def test_unexpected_tool_exception_is_recorded_as_failure() -> None:
+    registry = ToolRegistry()
+
+    def broken_handler(arguments: dict) -> dict:
+        raise OSError("warehouse transport unavailable")
+
+    definition = registry.get("get_order")
+    registry._definitions["get_order"] = replace(definition, handler=broken_handler)
+    settings = Settings(agent_mode="mock", database_path=":memory:")
+    repository = SQLiteRepository(":memory:")
+    orchestrator = AgentOrchestrator(settings, repository, registry)
+
+    result = orchestrator.start(RunRequest(request="Investigate order 100245."))
+
+    assert result.status is RunStatus.FAILED
+    assert result.tool_calls[0].status is ToolCallStatus.FAILED
+    assert "warehouse transport unavailable" in (result.tool_calls[0].error or "")
 
 
 def test_healthy_order_returns_shipped_findings_without_approval() -> None:
@@ -139,7 +243,7 @@ def test_tool_failure_is_recorded_and_returns_safe_result() -> None:
 
     result = orchestrator.start(RunRequest(request="Investigate order 999999."))
 
-    assert result.status is RunStatus.COMPLETED
+    assert result.status is RunStatus.FAILED
     assert result.tool_calls[0].status is ToolCallStatus.FAILED
     assert "not found" in (result.tool_calls[0].error or "")
     assert result.errors

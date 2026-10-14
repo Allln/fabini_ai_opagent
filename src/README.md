@@ -6,16 +6,18 @@ structured audit trail.
 
 The project uses Python 3.12, FastAPI, Pydantic, SQLite, vanilla HTML/CSS/JS,
 and Google's Gemini API. The operational systems are simulated in-process:
-this is not a production integration.
+this is not a production integration. Mock mode is intentionally a scripted
+expert walkthrough for the documented scenarios, not general model reasoning.
 
 ## Run locally
 
+Run these commands from the `src` directory:
+
 ```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+py -3.12 -m venv ..\.venv
+..\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 Copy-Item .env.example .env
-python -m app.main
+..\.venv\Scripts\python.exe -m app.main
 ```
 
 Open <http://127.0.0.1:8000>. Mock mode is the default and needs no key or
@@ -55,16 +57,18 @@ manual runs are recorded in [case_study.md](case_study.md).
   constants, including the Gemini system instruction.
 
 Read-only `get_*` tools run automatically. `retry_sync` and `create_ticket`
-require approval because they have side effects. Mock mode was chosen because
-it makes the same flow reproducible and testable without credentials; Gemini
-was added to demonstrate real tool calling. SQLite was chosen to keep the POC
+require an explicit user request and human approval because they have side
+effects. The deterministic mock does not decide whether a retry is worthwhile;
+it recognizes explicit action wording and rejects negated requests. Gemini was
+added to demonstrate real tool calling. SQLite was chosen to keep the POC
 auditable and local; the UI is framework-free to keep the demo small.
 
 `get_order_audit(order_id)` is a read-only tool backed by the same local
 SQLite repository. It returns related historical `tool_calls` and `approvals`
 whose arguments contain that order ID. The final mock-mode diagnosis formats
 those records into the summary, so a request about an order also mentions its
-known local operational history.
+known local operational history. It is an internal POC audit helper, not a
+replacement for an operational order, payment, fulfillment, or ticket system.
 
 The audit trail stores structured events and tool metadata, not hidden
 chain-of-thought.
@@ -160,6 +164,4 @@ Gemini behavior, are in [case_study.md](case_study.md).
 .\.venv\Scripts\mypy app
 ```
 
-Current verified result: 10 tests pass; Ruff lint and formatting pass. Mypy is
-included, but its executable was blocked by the local Windows Application
-Control policy, so no successful mypy result is claimed.
+Current verified result: 19 tests pass; Ruff lint, formatting, and mypy pass.

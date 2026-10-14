@@ -10,6 +10,9 @@
   infrastructure.
 - **Approval for `retry_sync` and `create_ticket`:** both can change external
   operational state, unlike the four read-only `get_*` tools.
+- **Explicit action intent:** the deterministic walkthrough only requests an
+  action when the user explicitly asks for it; negated requests do not trigger
+  approval. Approval is still required before execution.
 - **Bounded orchestration:** allow-listed schemas, per-tool timeout, one retry
   only for read-only tools, iteration limit, and action idempotency prevent
   uncontrolled execution.
@@ -37,6 +40,7 @@ Calls, in order:
 2. `get_payment` → payment `captured`
 3. `get_fulfillment` → `blocked`, reason `sync_error`
 4. `get_sync_logs` → latest event `Warehouse API timeout`
+5. `get_order_audit` → related local audit records
 
 Result: `completed`, with findings identifying the blocked fulfillment and
 synchronization timeout. No side effect is called. Covered by
@@ -55,7 +59,7 @@ observed run, not a guaranteed sequence for every Gemini response.
 
 ### Mock mode — automated and reproducible
 
-After the same four read-only calls, the adapter proposes
+After the same read-only calls and local audit lookup, the adapter proposes
 `retry_sync({"order_id": "100245"})`. The run becomes `waiting_approval`.
 Approval executes the simulated action once, returns `queued`, and finishes
 `completed`; rejection finishes `blocked` without executing it. Duplicate
@@ -84,21 +88,22 @@ successful diagnosis. Covered by
 
 `get_order`, `get_fulfillment`, and `get_sync_logs` all failed for the missing
 order. Gemini called no side-effecting tool and returned a Czech message that
-the order was not found. The run was `completed` with failed tool records and
+the order was not found. The run is `failed` with failed tool records and
 no separate findings. Continuing with additional read-only calls is
 model-dependent; the iteration limit and audit trail bound and expose it.
 
 ## What is verified
 
-- Mock multi-step diagnosis, approval/rejection, failure handling, iteration
-  limit, duplicate approval protection, API endpoints, and frontend serving:
-  10 automated tests pass.
+- Mock multi-step diagnosis, approval/rejection, negated intent, batched tool
+  calls, invalid action arguments, failure handling, iteration limit, duplicate
+  approval protection, Gemini adapter translation, API endpoints, and frontend
+  serving: 19 automated tests
+  pass.
 - Ruff lint and formatting checks pass.
 - The three Gemini outcomes above were manually observed with a configured API
   key; they are examples, not deterministic guarantees.
 
-Mypy remains a configured check, but its executable was blocked by the local
-Windows Application Control policy. No successful mypy result is claimed.
+Mypy passes for the application package.
 
 ## POC limitations
 

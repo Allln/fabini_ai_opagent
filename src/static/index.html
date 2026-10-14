@@ -16,6 +16,13 @@
             The agent gathers evidence, records every step, and pauses before any
             side-effecting action.
           </p>
+          <div class="tool-guide-note">
+            <p class="note-title">Available Tools &amp; Triggering Behavior</p>
+            <ul class="note-list">
+              <li><strong>Read-only tools (Automatic):</strong> <code>get_order</code>, <code>get_payment</code>, <code>get_fulfillment</code>, <code>get_sync_logs</code>, <code>get_order_audit</code> — executed automatically to investigate evidence.</li>
+              <li><strong>Action tools (Explicit prompt required):</strong> <code>retry_sync</code>, <code>create_ticket</code> — the agent does not autonomously decide to perform actions unless explicitly requested in your prompt (e.g., <em>"retry sync if blocked"</em>), and all actions require human approval.</li>
+            </ul>
+          </div>
         </div>
         <span id="mode-badge" class="badge">MOCK MODE</span>
       </header>

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Protocol
+from typing import Any, Protocol
 
 from google.genai import errors
 
@@ -21,7 +21,7 @@ class MockAgentModel:
         self._request = ""
         self._order_id = ""
         self._stage = 0
-        self._observations: dict[str, dict] = {}
+        self._observations: dict[str, dict[str, Any]] = {}
 
     def start(self, request: str) -> ModelTurn:
         self._request = request
@@ -90,9 +90,9 @@ class MockAgentModel:
             request_lower = self._request.lower()
             fulfillment = self._observations.get("get_fulfillment", {})
             sync_failed = fulfillment.get("status") == "blocked"
-            if sync_failed and any(
-                phrase in request_lower
-                for phrase in ("retry", "resync", "repeat synchronization", "execute")
+            if sync_failed and self._requests_action(
+                request_lower,
+                ("retry", "resync", "repeat synchronization"),
             ):
                 return ModelTurn(
                     text="The order is blocked by synchronization and a retry is requested.",
@@ -103,7 +103,7 @@ class MockAgentModel:
                         )
                     ],
                 )
-            if any(phrase in request_lower for phrase in ("ticket", "incident")):
+            if self._requests_action(request_lower, ("ticket", "incident")):
                 return ModelTurn(
                     text=(
                         "The evidence supports opening an incident for the synchronization failure."
@@ -123,7 +123,19 @@ class MockAgentModel:
             return ModelTurn(text=self._diagnosis())
         return ModelTurn(text=self._diagnosis(action_completed=True))
 
+    @staticmethod
+    def _requests_action(request: str, phrases: tuple[str, ...]) -> bool:
+        for phrase in phrases:
+            for match in re.finditer(re.escape(phrase), request):
+                prefix = request[max(0, match.start() - 40) : match.start()]
+                if re.search(r"\b(?:do not|don't|never|not|without|no)\b[^.!?;]{0,30}$", prefix):
+                    continue
+                return True
+        return False
+
     def _diagnosis(self, action_completed: bool = False) -> str:
+        order = self._observations.get("get_order", {})
+        payment = self._observations.get("get_payment", {})
         fulfillment = self._observations.get("get_fulfillment", {})
         logs = self._observations.get("get_sync_logs", {}).get("entries", [])
         latest = logs[0]["message"] if logs else "no synchronization error was recorded"
@@ -132,14 +144,15 @@ class MockAgentModel:
         action_note = " The requested action was completed." if action_completed else ""
         return (
             f"Order {self._order_id} is {fulfillment.get('status', 'unknown')}; "
-            f"payment and order data were available. The latest synchronization evidence "
+            f"order status is {order.get('status', 'unknown')} and payment status is "
+            f"{payment.get('status', 'unknown')}. The latest synchronization evidence "
             f"is: {latest}."
             f" {audit_note}"
             f"{action_note}"
         )
 
     @staticmethod
-    def _format_audit(audit: dict) -> str:
+    def _format_audit(audit: dict[str, Any]) -> str:
         records = audit.get("records", [])
         if not records:
             return "No related local SQLite audit records were found."
@@ -215,7 +228,7 @@ class GeminiAgentModel:
         for part in content.parts or []:
             if part.text:
                 text_parts.append(part.text)
-            if part.function_call:
+            if part.function_call and part.function_call.name:
                 calls.append(
                     ToolCallRequest(
                         name=part.function_call.name,
