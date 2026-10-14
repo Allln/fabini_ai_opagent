@@ -139,6 +139,7 @@ def _create_ticket(arguments: dict[str, Any]) -> dict[str, Any]:
     return ticket
 
 
+
 class ToolRegistry:
     def __init__(
         self,
