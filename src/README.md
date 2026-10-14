@@ -46,9 +46,9 @@ manual runs are recorded in [case_study.md](case_study.md).
 - [app/agent/orchestrator.py](app/agent/orchestrator.py) owns the bounded
   multi-step loop, approvals, idempotency, and structured outcomes.
 - [app/tools/registry.py](app/tools/registry.py) validates and executes the
-  six assignment tools:
-  `get_order`, `get_payment`, `get_fulfillment`, `get_sync_logs`, `retry_sync`,
-  and `create_ticket`.
+  seven tools:
+  `get_order`, `get_payment`, `get_fulfillment`, `get_sync_logs`,
+  `get_order_audit`, `retry_sync`, and `create_ticket`.
 - [app/db/repository.py](app/db/repository.py) persists runs, events, tool
   calls, and approvals in SQLite.
 - [app/config.py](app/config.py) centralizes runtime defaults and small policy
@@ -59,6 +59,12 @@ require approval because they have side effects. Mock mode was chosen because
 it makes the same flow reproducible and testable without credentials; Gemini
 was added to demonstrate real tool calling. SQLite was chosen to keep the POC
 auditable and local; the UI is framework-free to keep the demo small.
+
+`get_order_audit(order_id)` is a read-only tool backed by the same local
+SQLite repository. It returns related historical `tool_calls` and `approvals`
+whose arguments contain that order ID. The final mock-mode diagnosis formats
+those records into the summary, so a request about an order also mentions its
+known local operational history.
 
 The audit trail stores structured events and tool metadata, not hidden
 chain-of-thought.
@@ -96,7 +102,8 @@ Show me the current warehouse status.
 Expected behavior:
 
 - `100245` is the blocked synchronization case; diagnosis is automatic, while
-  `retry_sync` and `create_ticket` pause for approval.
+  `retry_sync` and `create_ticket` pause for approval. Its final summary also
+  includes related local SQLite audit records.
 - `100246` and `100247` are healthy shipped-order cases and should complete
   without approval.
 - `100248` is pending in picking and should produce evidence without requesting

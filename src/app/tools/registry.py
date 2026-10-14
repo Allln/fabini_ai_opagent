@@ -39,6 +39,7 @@ class ToolDefinition:
         }
 
 
+# dummy data
 MOCK_ORDERS: dict[str, dict[str, Any]] = {
     "100245": {
         "order_id": "100245",
@@ -139,8 +140,13 @@ def _create_ticket(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 class ToolRegistry:
-    def __init__(self, timeout_seconds: float = 3.0) -> None:
+    def __init__(
+        self,
+        timeout_seconds: float = 3.0,
+        audit_query: Callable[[str], dict[str, Any]] | None = None,
+    ) -> None:
         self.timeout_seconds = timeout_seconds
+        self.audit_query = audit_query
         self._definitions = {
             definition.name: definition
             for definition in (
@@ -169,6 +175,12 @@ class ToolRegistry:
                     _get_sync_logs,
                 ),
                 ToolDefinition(
+                    "get_order_audit",
+                    "Get related local SQLite tool calls and approvals for an order.",
+                    OrderIdInput,
+                    self._get_order_audit,
+                ),
+                ToolDefinition(
                     "retry_sync",
                     "Queue one synchronization retry for an order.",
                     OrderIdInput,
@@ -184,6 +196,11 @@ class ToolRegistry:
                 ),
             )
         }
+
+    def _get_order_audit(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        if self.audit_query is None:
+            raise ToolExecutionError("Order audit tool is not connected to the SQLite repository")
+        return self.audit_query(arguments["order_id"])
 
     def get(self, name: str) -> ToolDefinition:
         return self._definitions[name]

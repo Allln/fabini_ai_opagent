@@ -29,7 +29,10 @@ def create_app(
     orchestrator = AgentOrchestrator(
         resolved_settings,
         resolved_repository,
-        ToolRegistry(resolved_settings.tool_timeout_seconds),
+        ToolRegistry(
+            resolved_settings.tool_timeout_seconds,
+            audit_query=resolved_repository.get_order_audit,
+        ),
     )
     application = FastAPI(
         title="FABINI AI Operations Agent",

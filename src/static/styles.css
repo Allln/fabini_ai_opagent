@@ -52,6 +52,21 @@ button { cursor: pointer; border: 0; font: inherit; }
 .status.waiting_approval { color: #80501b; background: #f5e4c9; }
 .status.failed, .status.blocked, .status.limit_reached { color: #8e342f; background: #f5d9d7; }
 .summary { margin: 22px 0; padding: 17px; border-left: 3px solid var(--green); background: #f4f8f3; line-height: 1.55; }
+.db-toggle { display: inline-flex; align-items: center; gap: 9px; color: var(--green-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+.db-toggle input { width: 16px; height: 16px; accent-color: var(--green); }
+.db-details { margin-top: 15px; padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #fbfcfa; }
+.db-details-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.db-details-heading h3 { margin: 0; }
+.table-scroll { max-height: 420px; overflow: auto; }
+.db-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.db-table th { padding: 9px 10px; color: var(--muted); background: #eef3ee; text-align: left; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.db-table td { max-width: 270px; padding: 10px; border-top: 1px solid var(--line); vertical-align: top; }
+.db-table td:last-child { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.db-table code { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
+.db-status { display: inline-block; padding: 4px 7px; border-radius: 999px; color: var(--muted); background: #edf0ed; font-size: 10px; font-weight: 800; }
+.db-status.succeeded, .db-status.executed { color: var(--green-dark); background: #d7eadb; }
+.db-status.failed, .db-status.rejected { color: #8e342f; background: #f5d9d7; }
+.db-status.pending, .db-status.approved { color: #80501b; background: #f5e4c9; }
 .section-block { margin-top: 25px; padding-top: 22px; border-top: 1px solid var(--line); }
 .plain-list { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.7; }
 .tool-list { display: grid; gap: 8px; }

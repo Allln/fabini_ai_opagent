@@ -224,6 +224,65 @@ class SQLiteRepository:
             return None
         return AgentRunResult.model_validate(json.loads(row["result_json"]))
 
+    def get_order_audit(self, order_id: str) -> dict[str, Any]:
+        records: list[dict[str, Any]] = []
+        tool_calls = self._connection.execute(
+            """
+            SELECT call_id, run_id, sequence, name, arguments_json, status,
+                   result_json, error, started_at, finished_at
+            FROM tool_calls
+            ORDER BY started_at, sequence
+            """
+        )
+        for row in tool_calls:
+            arguments = json.loads(row["arguments_json"])
+            if arguments.get("order_id") != order_id:
+                continue
+            records.append(
+                {
+                    "source": "tool_calls",
+                    "call_id": row["call_id"],
+                    "run_id": row["run_id"],
+                    "sequence": row["sequence"],
+                    "name": row["name"],
+                    "arguments": arguments,
+                    "status": row["status"],
+                    "result": json.loads(row["result_json"]) if row["result_json"] else None,
+                    "error": row["error"],
+                    "started_at": row["started_at"],
+                    "finished_at": row["finished_at"],
+                }
+            )
+
+        approvals = self._connection.execute(
+            """
+            SELECT approval_id, run_id, action_key, tool_name, arguments_json,
+                   status, created_at, resolved_at
+            FROM approvals
+            ORDER BY created_at
+            """
+        )
+        for row in approvals:
+            arguments = json.loads(row["arguments_json"])
+            if arguments.get("order_id") != order_id:
+                continue
+            records.append(
+                {
+                    "source": "approvals",
+                    "approval_id": row["approval_id"],
+                    "run_id": row["run_id"],
+                    "action_key": row["action_key"],
+                    "tool_name": row["tool_name"],
+                    "arguments": arguments,
+                    "status": row["status"],
+                    "created_at": row["created_at"],
+                    "resolved_at": row["resolved_at"],
+                }
+            )
+
+        records.sort(key=lambda record: record.get("started_at") or record["created_at"])
+        return {"order_id": order_id, "record_count": len(records), "records": records}
+
     def close(self) -> None:
         with self._lock:
             self._connection.close()

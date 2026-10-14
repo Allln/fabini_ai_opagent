@@ -11,10 +11,11 @@ def build_orchestrator(max_iterations: int = 8) -> AgentOrchestrator:
         database_path=":memory:",
         max_iterations=max_iterations,
     )
+    repository = SQLiteRepository(":memory:")
     return AgentOrchestrator(
         settings,
-        SQLiteRepository(":memory:"),
-        ToolRegistry(settings.tool_timeout_seconds),
+        repository,
+        ToolRegistry(settings.tool_timeout_seconds, audit_query=repository.get_order_audit),
     )
 
 
@@ -31,6 +32,7 @@ def test_successful_diagnosis_uses_multiple_read_only_tools() -> None:
         "get_payment",
         "get_fulfillment",
         "get_sync_logs",
+        "get_order_audit",
     ]
     assert "synchronization" in (result.summary or "").lower()
     assert result.findings == [
@@ -79,6 +81,7 @@ def test_healthy_order_returns_shipped_findings_without_approval() -> None:
         "get_payment",
         "get_fulfillment",
         "get_sync_logs",
+        "get_order_audit",
     ]
 
 
@@ -164,6 +167,33 @@ def test_duplicate_approval_is_idempotent() -> None:
 
     assert first.model_dump(mode="json") == second.model_dump(mode="json")
     assert [call.name for call in second.tool_calls].count("retry_sync") == 1
+
+
+def test_order_audit_tool_reads_previous_calls_and_approvals(tmp_path) -> None:
+    database_path = str(tmp_path / "audit.db")
+    settings = Settings(agent_mode="mock", database_path=database_path)
+    repository = SQLiteRepository(database_path)
+    orchestrator = AgentOrchestrator(
+        settings,
+        repository,
+        ToolRegistry(settings.tool_timeout_seconds, audit_query=repository.get_order_audit),
+    )
+
+    first = orchestrator.start(
+        RunRequest(request="Investigate order 100245 and retry sync if it is blocked.")
+    )
+    orchestrator.resolve_approval(first.run_id, first.approvals[0].id, "approve")
+
+    second = orchestrator.start(RunRequest(request="Investigate order 100245."))
+
+    assert "Local SQLite audit for order 100245" in (second.summary or "")
+    audit_call = next(call for call in second.tool_calls if call.name == "get_order_audit")
+    assert any(
+        record["source"] == "approvals"
+        and record["tool_name"] == "retry_sync"
+        and record["status"] == "executed"
+        for record in (audit_call.result or {}).get("records", [])
+    )
 
 
 def test_tool_registry_rejects_unknown_or_malformed_calls() -> None:

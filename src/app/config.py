@@ -14,6 +14,8 @@ READ_ONLY_TOOL_MAX_ATTEMPTS = 2
 GEMINI_TEMPERATURE = 0
 GEMINI_SYSTEM_INSTRUCTION = (
     "You are a cautious operations agent. Investigate using read-only tools first. "
+    "When an order ID is being investigated, use get_order_audit to include related "
+    "local audit records in the final answer. "
     "Use retry_sync or create_ticket only when the user explicitly requests that action; "
     "the host application will gate it with approval. Never invent tool results. "
     "Give a concise final answer."

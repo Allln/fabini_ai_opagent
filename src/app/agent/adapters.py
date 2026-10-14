@@ -77,6 +77,16 @@ class MockAgentModel:
             )
         if self._stage == 4:
             self._stage = 5
+            return ModelTurn(
+                tool_calls=[
+                    ToolCallRequest(
+                        name="get_order_audit",
+                        arguments={"order_id": self._order_id},
+                    )
+                ]
+            )
+        if self._stage == 5:
+            self._stage = 6
             request_lower = self._request.lower()
             fulfillment = self._observations.get("get_fulfillment", {})
             sync_failed = fulfillment.get("status") == "blocked"
@@ -117,12 +127,25 @@ class MockAgentModel:
         fulfillment = self._observations.get("get_fulfillment", {})
         logs = self._observations.get("get_sync_logs", {}).get("entries", [])
         latest = logs[0]["message"] if logs else "no synchronization error was recorded"
+        audit = self._observations.get("get_order_audit", {})
+        audit_note = self._format_audit(audit)
         action_note = " The requested action was completed." if action_completed else ""
         return (
             f"Order {self._order_id} is {fulfillment.get('status', 'unknown')}; "
             f"payment and order data were available. The latest synchronization evidence "
             f"is: {latest}."
+            f" {audit_note}"
             f"{action_note}"
+        )
+
+    @staticmethod
+    def _format_audit(audit: dict) -> str:
+        records = audit.get("records", [])
+        if not records:
+            return "No related local SQLite audit records were found."
+        return (
+            f"Local SQLite audit for order {audit.get('order_id')} contains "
+            f"{len(records)} related records; see Related DB details."
         )
 
 

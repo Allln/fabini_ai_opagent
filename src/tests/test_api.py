@@ -7,7 +7,8 @@ from app.main import create_app
 
 def test_api_runs_mock_scenario_and_returns_structured_result() -> None:
     settings = Settings(agent_mode="mock", database_path=":memory:")
-    client = TestClient(create_app(settings, SQLiteRepository(":memory:")))
+    repository = SQLiteRepository(":memory:")
+    client = TestClient(create_app(settings, repository))
 
     response = client.post(
         "/api/runs",
@@ -23,7 +24,8 @@ def test_api_runs_mock_scenario_and_returns_structured_result() -> None:
 
 def test_api_exposes_health_and_static_frontend() -> None:
     settings = Settings(agent_mode="mock", database_path=":memory:")
-    client = TestClient(create_app(settings, SQLiteRepository(":memory:")))
+    repository = SQLiteRepository(":memory:")
+    client = TestClient(create_app(settings, repository))
 
     assert client.get("/health").json() == {"status": "ok", "mode": "mock"}
     assert "FABINI Operations Agent" in client.get("/").text
@@ -31,7 +33,8 @@ def test_api_exposes_health_and_static_frontend() -> None:
 
 def test_api_approval_endpoint_resumes_pending_action() -> None:
     settings = Settings(agent_mode="mock", database_path=":memory:")
-    client = TestClient(create_app(settings, SQLiteRepository(":memory:")))
+    repository = SQLiteRepository(":memory:")
+    client = TestClient(create_app(settings, repository))
 
     pending = client.post(
         "/api/runs",

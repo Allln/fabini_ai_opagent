@@ -5,6 +5,8 @@ const runButton = form.querySelector("button[type=submit]");
 const resultSection = document.querySelector("#result-section");
 const statusBadge = document.querySelector("#status-badge");
 const modeBadge = document.querySelector("#mode-badge");
+const dbDetailsToggle = document.querySelector("#db-details-toggle");
+const dbDetails = document.querySelector("#db-details");
 let currentResult = null;
 
 document.querySelectorAll("[data-example]").forEach((button) => {
@@ -16,6 +18,10 @@ document.querySelectorAll("[data-example]").forEach((button) => {
 
 modeInput.addEventListener("change", () => {
   modeBadge.textContent = `${modeInput.value.toUpperCase()} MODE`;
+});
+
+dbDetailsToggle.addEventListener("change", () => {
+  renderDatabaseDetails(currentResult);
 });
 
 form.addEventListener("submit", async (event) => {
@@ -51,10 +57,75 @@ function render(result) {
     .map((call) => `<div class="tool ${call.status === "succeeded" ? "ok" : "fail"}">
       <strong>${escapeHtml(call.name)}</strong><small>${escapeHtml(call.status)}</small>
     </div>`).join("") || "<span class='hint'>No tools called.</span>";
+  renderDatabaseDetails(result);
   renderApproval(result);
   document.querySelector("#timeline").innerHTML = (result.steps || [])
     .map((step) => `<div class="event"><strong>${escapeHtml(step.kind.replaceAll("_", " "))}</strong>
       <small>${escapeHtml(step.message)}</small></div>`).join("");
+}
+
+function renderDatabaseDetails(result) {
+  if (!dbDetailsToggle.checked || !result) {
+    dbDetails.classList.add("hidden");
+    return;
+  }
+  const auditCall = (result.tool_calls || []).find((call) => call.name === "get_order_audit");
+  const records = auditCall?.result?.records || [];
+  if (!records.length) {
+    dbDetails.innerHTML = "<p class='hint'>No related SQLite records were returned.</p>";
+    dbDetails.classList.remove("hidden");
+    return;
+  }
+  dbDetails.innerHTML = `
+    <div class="db-details-heading">
+      <h3>Related DB details</h3>
+      <span class="hint">${records.length} record(s)</span>
+    </div>
+    <div class="table-scroll">
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Operation</th>
+            <th>Status</th>
+            <th>Run</th>
+            <th>Time</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>${records.map(renderDatabaseRow).join("")}</tbody>
+      </table>
+    </div>`;
+  dbDetails.classList.remove("hidden");
+}
+
+function renderDatabaseRow(record) {
+  const operation = record.name || record.tool_name || "-";
+  const timestamp = record.started_at || record.created_at || "-";
+  const details = {
+    arguments: record.arguments,
+    ...(record.result ? {result: record.result} : {}),
+    ...(record.error ? {error: record.error} : {}),
+    ...(record.resolved_at ? {resolved_at: record.resolved_at} : {}),
+  };
+  return `<tr>
+    <td>${escapeHtml(record.source || "-")}</td>
+    <td><strong>${escapeHtml(operation)}</strong></td>
+    <td><span class="db-status ${escapeHtml(record.status || "")}">
+      ${escapeHtml(record.status || "-")}</span></td>
+    <td><code>${escapeHtml(shortRunId(record.run_id))}</code></td>
+    <td>${escapeHtml(formatTimestamp(timestamp))}</td>
+    <td><code>${escapeHtml(JSON.stringify(details))}</code></td>
+  </tr>`;
+}
+
+function shortRunId(runId) {
+  return runId ? String(runId).slice(0, 8) : "-";
+}
+
+function formatTimestamp(timestamp) {
+  if (timestamp === "-") return timestamp;
+  return String(timestamp).replace("T", " ").replace(/\.\d+/, "");
 }
 
 function renderApproval(result) {
@@ -97,6 +168,7 @@ function renderError(message) {
   statusBadge.className = "status failed";
   document.querySelector("#result-title").textContent = "Request failed";
   document.querySelector("#summary").textContent = message;
+  dbDetails.classList.add("hidden");
 }
 
 function escapeHtml(value) {
