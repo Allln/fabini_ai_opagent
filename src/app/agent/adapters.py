@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import re
 from typing import Any, Protocol
-
 from google.genai import errors
-
 from app.agent.policy import is_explicit_action_request
 from app.config import GEMINI_SYSTEM_INSTRUCTION, GEMINI_TEMPERATURE
 from app.models import ModelTurn, ToolCallRequest, ToolResult
 from app.tools.registry import ToolRegistry
-
 
 class AgentModel(Protocol):
     def start(self, request: str) -> ModelTurn: ...
