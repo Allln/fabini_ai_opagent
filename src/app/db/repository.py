@@ -17,8 +17,6 @@ from app.models import (
 
 
 class SQLiteRepository:
-    """Small SQLite repository for run snapshots and append-only audit records."""
-
     def __init__(self, database_path: str) -> None:
         self._connection = sqlite3.connect(database_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row

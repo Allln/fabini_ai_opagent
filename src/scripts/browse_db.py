@@ -6,8 +6,9 @@ import argparse
 import json
 import sqlite3
 import sys
-from typing import Any
 from pathlib import Path
+from typing import Any
+
 
 def configure_output() -> None:
     if (sys.stdout.encoding or "").lower() != "utf-8":
@@ -18,9 +19,7 @@ def parse_args() -> argparse.Namespace:
     script_dir = Path(__file__).resolve().parent
     default_db = script_dir.parent / "fabini.db"
 
-    parser = argparse.ArgumentParser(
-        description="Browse FABINI agent runs and audit records."
-    )
+    parser = argparse.ArgumentParser(description="Browse FABINI agent runs and audit records.")
     parser.add_argument(
         "--db",
         default=str(default_db),

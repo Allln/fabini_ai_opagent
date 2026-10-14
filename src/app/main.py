@@ -16,7 +16,6 @@ from app.models import AgentRunResult, RunRequest
 from app.tools.registry import ToolRegistry
 
 
-
 class ApprovalDecision(BaseModel):
     decision: Literal["approve", "reject"]
 

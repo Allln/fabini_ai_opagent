@@ -1,4 +1,3 @@
-# Local Python environments and packaging output
 .venv/
 venv/
 ENV/
@@ -12,8 +11,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-
-# Test, type-checking, lint, and coverage output
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -24,8 +21,6 @@ build/
 .coverage.*
 coverage.xml
 htmlcov/
-
-# Local application state and runtime logs
 *.db
 *.sqlite
 *.sqlite3
@@ -35,8 +30,6 @@ htmlcov/
 *.pid
 *.tmp
 *.temp
-
-# IDE and editor metadata
 .idea/
 .vscode/*
 !.vscode/extensions.json
@@ -44,7 +37,5 @@ htmlcov/
 *.code-workspace
 *.swp
 *.swo
-
-# Operating-system metadata
 .DS_Store
 Thumbs.db

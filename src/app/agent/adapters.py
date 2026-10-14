@@ -11,13 +11,10 @@ from app.tools.registry import ToolRegistry
 
 class AgentModel(Protocol):
     def start(self, request: str) -> ModelTurn: ...
-
     def submit_tool_results(self, results: list[ToolResult]) -> ModelTurn: ...
 
 
 class MockAgentModel:
-    """Deterministic model used for demos and tests without network access."""
-
     def __init__(self, registry: ToolRegistry) -> None:
         self._registry = registry
         self._request = ""
@@ -113,7 +110,6 @@ class MockAgentModel:
                     ],
                 )
             return ModelTurn(text=self._diagnosis())
-
         return ModelTurn(text=self._diagnosis(action_completed=True))
 
     def _diagnosis(self, action_completed: bool = False) -> str:
@@ -130,8 +126,6 @@ class MockAgentModel:
 
 
 class GeminiAgentModel:
-    """Google Gemini adapter using native function calling."""
-
     def __init__(self, api_key: str, model_name: str, registry: ToolRegistry) -> None:
         from google import genai
         from google.genai import types
