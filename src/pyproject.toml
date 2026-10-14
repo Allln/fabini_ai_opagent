@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "fabini-ai-operations-agent"
 version = "0.1.0"
 description = "A bounded AI operations agent proof of concept for FABINI."
-readme = "README.md"
+readme = { text = "A bounded AI operations agent proof of concept for FABINI.", content-type = "text/plain" }
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "fastapi>=0.115,<1.0",
@@ -45,4 +45,3 @@ select = ["E", "F", "I", "B", "UP"]
 python_version = "3.12"
 strict = true
 exclude = ["tests"]
-
