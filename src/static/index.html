@@ -77,6 +77,19 @@
           </div>
           <p id="summary" class="summary"></p>
           <div id="approval-panel"></div>
+          <div class="section-block state-graph-panel">
+            <div class="state-graph-heading">
+              <div>
+                <h3>Detected order state</h3>
+                <p id="state-graph-caption" class="hint">
+                  Derived from the evidence collected in this run.
+                </p>
+              </div>
+              <span id="state-graph-order" class="graph-order"></span>
+            </div>
+            <div id="state-graph" class="state-graph" aria-live="polite"></div>
+            <p id="state-graph-audit" class="state-graph-audit hint"></p>
+          </div>
           <div id="db-details" class="db-details hidden"></div>
           <div class="section-block">
             <h3>Findings</h3>

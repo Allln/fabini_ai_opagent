@@ -7,6 +7,10 @@ const statusBadge = document.querySelector("#status-badge");
 const modeBadge = document.querySelector("#mode-badge");
 const dbDetailsToggle = document.querySelector("#db-details-toggle");
 const dbDetails = document.querySelector("#db-details");
+const stateGraph = document.querySelector("#state-graph");
+const stateGraphCaption = document.querySelector("#state-graph-caption");
+const stateGraphOrder = document.querySelector("#state-graph-order");
+const stateGraphAudit = document.querySelector("#state-graph-audit");
 let currentResult = null;
 
 document.querySelectorAll("[data-example]").forEach((button) => {
@@ -51,6 +55,7 @@ function render(result) {
   statusBadge.className = `status ${result.status}`;
   document.querySelector("#result-title").textContent = `Run ${result.run_id.slice(0, 8)}`;
   document.querySelector("#summary").textContent = result.summary || "The agent is working...";
+  renderStateGraph(result);
   document.querySelector("#findings").innerHTML = (result.findings || [])
     .map((finding) => `<li>${escapeHtml(finding)}</li>`).join("") || "<li>No separate findings recorded.</li>";
   document.querySelector("#tool-calls").innerHTML = (result.tool_calls || [])
@@ -97,6 +102,128 @@ function renderDatabaseDetails(result) {
       </table>
     </div>`;
   dbDetails.classList.remove("hidden");
+}
+
+function renderStateGraph(result) {
+  const orderCall = (result.tool_calls || []).find((call) => call.name === "get_order");
+  const order = successfulToolResult(result, "get_order");
+  const payment = successfulToolResult(result, "get_payment");
+  const fulfillment = successfulToolResult(result, "get_fulfillment");
+  const syncLogs = successfulToolResult(result, "get_sync_logs");
+  const audit = successfulToolResult(result, "get_order_audit");
+  const orderId = order?.order_id || extractOrderId(result.request);
+  const nodes = [];
+
+  if (order) {
+    const orderDetails = [
+      order.status,
+      order.items ? `${order.items} item(s)` : null,
+      order.warehouse,
+    ].filter(Boolean).join(" · ");
+    nodes.push({label: `Order ${orderId}`, detail: orderDetails, tone: toneFor(order.status)});
+  } else {
+    nodes.push({
+      label: `Order ${orderId || "not identified"}`,
+      detail: orderCall?.error || "No order data returned.",
+      tone: orderCall?.status === "failed" ? "danger" : "neutral",
+    });
+  }
+
+  if (payment) {
+    nodes.push({
+      label: "Payment",
+      detail: [payment.status, payment.transaction_id].filter(Boolean).join(" · "),
+      tone: toneFor(payment.status),
+    });
+  }
+  if (fulfillment) {
+    nodes.push({
+      label: "Fulfillment",
+      detail: [fulfillment.status, fulfillment.reason, fulfillment.tracking]
+        .filter(Boolean).join(" · "),
+      tone: toneFor(fulfillment.status),
+    });
+  }
+  const latestSync = syncLogs?.entries?.[0];
+  if (latestSync) {
+    nodes.push({
+      label: "Synchronization",
+      detail: [latestSync.status, latestSync.message].filter(Boolean).join(" · "),
+      tone: toneFor(latestSync.status),
+    });
+  }
+
+  const action = actionState(result);
+  if (action) nodes.push(action);
+
+  if (!nodes.length) {
+    stateGraph.innerHTML = "<p class='hint'>No order state was detected.</p>";
+    stateGraphCaption.textContent = "The run did not return state evidence.";
+    stateGraphOrder.textContent = "";
+    stateGraphAudit.textContent = "";
+    return;
+  }
+
+  const edgeLabels = ["payment", "fulfillment", "sync evidence", "next step"];
+  stateGraph.innerHTML = nodes.map((node, index) => `
+    ${index ? `<span class="state-edge" aria-hidden="true">
+      <span>${escapeHtml(edgeLabels[index - 1] || "related")}</span>→
+    </span>` : ""}
+    <div class="state-node ${node.tone}" aria-label="${escapeHtml(`${node.label}: ${node.detail}`)}">
+      <strong>${escapeHtml(node.label)}</strong>
+      <span>${escapeHtml(node.detail || "State not available")}</span>
+    </div>`).join("");
+  stateGraphCaption.textContent = "A visual summary of evidence detected by the agent.";
+  stateGraphOrder.textContent = orderId ? `ORDER ${orderId}` : "";
+  stateGraphAudit.textContent = audit
+    ? `Audit history: ${audit.record_count || audit.records?.length || 0} related record(s).`
+    : "";
+}
+
+function successfulToolResult(result, name) {
+  return (result.tool_calls || []).find(
+    (call) => call.name === name && call.status === "succeeded",
+  )?.result || null;
+}
+
+function extractOrderId(request) {
+  return String(request || "").match(/\b\d{4,20}\b/)?.[0] || "";
+}
+
+function actionState(result) {
+  const actionCall = (result.tool_calls || []).find(
+    (call) => ["retry_sync", "create_ticket"].includes(call.name),
+  );
+  const approval = (result.approvals || []).find((item) => item.status === "pending");
+  if (approval) {
+    return {
+      label: "Next action",
+      detail: `${approval.tool_name} · approval required`,
+      tone: "warning",
+    };
+  }
+  if (actionCall) {
+    return {
+      label: "Action",
+      detail: `${actionCall.name} · ${actionCall.status}`,
+      tone: toneFor(actionCall.status),
+    };
+  }
+  return null;
+}
+
+function toneFor(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (["captured", "shipped", "success", "succeeded", "completed", "paid"].includes(normalized)) {
+    return "success";
+  }
+  if (["blocked", "failed", "error", "rejected", "timed_out"].includes(normalized)) {
+    return "danger";
+  }
+  if (["pending", "retryable", "queued", "waiting_approval", "approved"].includes(normalized)) {
+    return "warning";
+  }
+  return "neutral";
 }
 
 function renderDatabaseRow(record) {
@@ -168,6 +295,10 @@ function renderError(message) {
   statusBadge.className = "status failed";
   document.querySelector("#result-title").textContent = "Request failed";
   document.querySelector("#summary").textContent = message;
+  stateGraph.innerHTML = "<p class='hint'>No order state available.</p>";
+  stateGraphCaption.textContent = "The request did not produce a state graph.";
+  stateGraphOrder.textContent = "";
+  stateGraphAudit.textContent = "";
   dbDetails.classList.add("hidden");
 }
 

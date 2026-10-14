@@ -76,6 +76,12 @@ replacement for an operational order, payment, fulfillment, or ticket system.
 The audit trail stores structured events and tool metadata, not hidden
 chain-of-thought.
 
+The result view also includes a lightweight detected-order-state graph. It
+projects the existing tool results into a readable visual chain of order,
+payment, fulfillment, synchronization, and any proposed or executed action.
+It is a presentation-only view derived from the structured result, not a new
+knowledge store or agent decision layer.
+
 ## Deterministic mock data
 
 Mock mode is fully local and deterministic. It does not call an external order,

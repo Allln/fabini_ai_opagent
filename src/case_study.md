@@ -29,6 +29,10 @@ function call. The orchestrator validates and executes allowed tools, sends
 results back to the adapter, and returns a structured result containing status,
 findings, steps, tool calls, approvals, errors, timestamps, and run ID.
 
+The result view also renders a lightweight order-state graph from the same
+structured tool results. It makes the detected order, payment, fulfillment,
+synchronization, and action state readable at a glance.
+
 ## Scenario 1 — successful diagnosis, no side effect
 
 **Request:** `Find out why order 100245 was not shipped and suggest next steps.`

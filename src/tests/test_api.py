@@ -28,7 +28,10 @@ def test_api_exposes_health_and_static_frontend() -> None:
     client = TestClient(create_app(settings, repository))
 
     assert client.get("/health").json() == {"status": "ok", "mode": "mock"}
-    assert "FABINI Operations Agent" in client.get("/").text
+    frontend = client.get("/")
+    assert "FABINI Operations Agent" in frontend.text
+    assert "Detected order state" in frontend.text
+    assert 'id="state-graph"' in frontend.text
 
 
 def test_api_approval_endpoint_resumes_pending_action() -> None:
