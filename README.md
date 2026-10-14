@@ -108,6 +108,7 @@ Workflow diagrams:
 
 ## Deterministic mock data
 
+
 Mock mode is fully local and deterministic. It does not call an external order,
 payment, warehouse, or ticketing system. The following records are available
 by order ID:
