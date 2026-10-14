@@ -61,6 +61,29 @@ auditable and local; the UI is framework-free to keep the demo small.
 The audit trail stores structured events and tool metadata, not hidden
 chain-of-thought.
 
+## Inspect the audit database
+
+After at least one run, the default `fabini.db` contains four related tables:
+`runs`, `tool_calls`, `approvals`, and `events`. The database path can be
+changed with `DATABASE_PATH` in `.env`.
+
+The presentation helper lists recent runs and prints the latest run's summary,
+findings, tool calls, approvals, and audit timeline:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\browse_db.py
+```
+
+Inspect a specific run or use another database:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\browse_db.py --run-id <run-id>
+.\.venv\Scripts\python.exe scripts\browse_db.py --db path\to\other.db --limit 20
+```
+
+For a graphical alternative, open `fabini.db` in any SQLite browser. Do not
+commit the file: local databases are covered by `.gitignore`.
+
 ## Safety boundaries
 
 - Allow-list and Pydantic validation reject unknown tools and malformed input.
