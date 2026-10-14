@@ -1,147 +1,108 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1060" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
   <title id="title">FABINI AI Operations Agent deterministic mock workflow</title>
-  <desc id="desc">A deterministic expert walkthrough from browser request through the API, orchestrator, fixed read-only tool sequence, approval gate, simulated action, SQLite audit, and structured result.</desc>
+  <desc id="desc">A high-level deterministic workflow: the request reaches the host, a fixed mock investigation sequence runs through validated tools, and the result may pause for approval before a simulated action.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
       <path d="M0 0 L10 5 L0 10 Z" fill="#236b50"/>
     </marker>
+    <marker id="orange-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#a85e22"/>
+    </marker>
     <style>
-      .title { font: 800 30px Inter, Arial, sans-serif; fill: #17211d; }
+      .title { font: 800 29px Inter, Arial, sans-serif; fill: #17211d; }
       .subtitle { font: 16px Inter, Arial, sans-serif; fill: #68736d; }
-      .section { font: 800 13px Inter, Arial, sans-serif; letter-spacing: 2px; fill: #236b50; }
-      .box-title { font: 800 17px Inter, Arial, sans-serif; fill: #17211d; }
+      .section { font: 800 12px Inter, Arial, sans-serif; letter-spacing: 2px; fill: #236b50; }
+      .box-title { font: 800 16px Inter, Arial, sans-serif; fill: #17211d; }
       .box-text { font: 14px Inter, Arial, sans-serif; fill: #68736d; }
       .small { font: 12px Inter, Arial, sans-serif; fill: #68736d; }
-      .label { font: 800 12px Inter, Arial, sans-serif; fill: #236b50; }
       .node { fill: #fff; stroke: #dfe5df; stroke-width: 2; }
-      .green-node { fill: #f4f8f3; stroke: #b9d9c1; stroke-width: 2; }
-      .orange-node { fill: #fff8ec; stroke: #ead0a9; stroke-width: 2; }
-      .red-node { fill: #fff5f4; stroke: #e3b5b2; stroke-width: 2; }
+      .green { fill: #f4f8f3; stroke: #b9d9c1; stroke-width: 2; }
+      .orange { fill: #fff8ec; stroke: #ead0a9; stroke-width: 2; }
+      .blue { fill: #f1f6fb; stroke: #bdd0e2; stroke-width: 2; }
       .lane { fill: #edf4ee; stroke: #c9dccd; stroke-width: 2; stroke-dasharray: 8 8; }
       .line { fill: none; stroke: #236b50; stroke-width: 3; marker-end: url(#arrow); }
+      .orange-line { fill: none; stroke: #a85e22; stroke-width: 3; marker-end: url(#orange-arrow); }
       .dashed { fill: none; stroke: #8d9a91; stroke-width: 2; stroke-dasharray: 7 7; marker-end: url(#arrow); }
     </style>
   </defs>
 
-  <rect width="1600" height="1060" fill="#f5f7f3"/>
-  <text x="70" y="62" class="title">FABINI AI Operations Agent · Deterministic Mock</text>
-  <text x="70" y="92" class="subtitle">A reproducible scripted expert walkthrough. The host still owns validation, execution, approval, limits, and persistence.</text>
+  <rect width="1200" height="760" fill="#f5f7f3"/>
+  <text x="55" y="55" class="title">FABINI AI Operations Agent · Deterministic Mock</text>
+  <text x="55" y="84" class="subtitle">A fixed, reproducible walkthrough: the same request follows the same investigation sequence.</text>
 
-  <text x="70" y="145" class="section">REQUEST AND HOST</text>
-  <rect x="70" y="170" width="230" height="100" rx="16" class="node"/>
-  <text x="95" y="207" class="box-title">Browser UI</text>
-  <text x="95" y="234" class="box-text">Natural-language request</text>
-  <text x="95" y="255" class="small">POST /api/runs</text>
+  <rect x="855" y="32" width="290" height="68" rx="14" class="green"/>
+  <text x="880" y="59" class="section">MAIN DIFFERENCE</text>
+  <text x="880" y="82" class="box-text">Scripted tool order · no model choice</text>
 
-  <rect x="395" y="170" width="230" height="100" rx="16" class="node"/>
-  <text x="420" y="207" class="box-title">FastAPI</text>
-  <text x="420" y="234" class="box-text">Run and approval endpoints</text>
-  <text x="420" y="255" class="small">Structured response to UI</text>
+  <text x="55" y="135" class="section">COMMON HOST PATH</text>
+  <rect x="55" y="155" width="185" height="92" rx="14" class="node"/>
+  <text x="78" y="190" class="box-title">1 · Browser</text>
+  <text x="78" y="216" class="box-text">User asks about an order</text>
+  <text x="78" y="235" class="small">POST /api/runs</text>
 
-  <rect x="720" y="170" width="270" height="100" rx="16" class="green-node"/>
-  <text x="745" y="207" class="box-title">AgentOrchestrator</text>
-  <text x="745" y="234" class="box-text">Bounded loop and host policy</text>
-  <text x="745" y="255" class="small">Validation · limits · persistence</text>
+  <rect x="300" y="155" width="220" height="92" rx="14" class="green"/>
+  <text x="323" y="190" class="box-title">2 · API + orchestrator</text>
+  <text x="323" y="216" class="box-text">Validate, bound, and audit</text>
+  <text x="323" y="235" class="small">Host policy applies in every mode</text>
 
-  <rect x="1085" y="170" width="300" height="100" rx="16" class="green-node"/>
-  <text x="1110" y="207" class="box-title">MockAgentModel</text>
-  <text x="1110" y="234" class="box-text">Fixed expert walkthrough</text>
-  <text x="1110" y="255" class="small">Stores observations between stages</text>
+  <rect x="580" y="155" width="240" height="92" rx="14" class="green"/>
+  <text x="603" y="190" class="box-title">3 · Mock adapter</text>
+  <text x="603" y="216" class="box-text">Loads the scripted walkthrough</text>
+  <text x="603" y="235" class="small">Local data, no credentials or network</text>
 
-  <path d="M300 220 H390" class="line"/>
-  <path d="M625 220 H715" class="line"/>
-  <path d="M990 220 H1080" class="line"/>
+  <path d="M240 201 H290" class="line"/>
+  <path d="M520 201 H570" class="line"/>
 
-  <text x="70" y="330" class="section">FIXED READ-ONLY INVESTIGATION SEQUENCE</text>
-  <rect x="70" y="355" width="1460" height="275" rx="20" class="lane"/>
-  <text x="100" y="390" class="box-title">The mock adapter requests these stages in order</text>
-  <text x="100" y="416" class="box-text">After each result, the orchestrator sends the result back to the adapter before the next stage.</text>
+  <rect x="55" y="295" width="1090" height="175" rx="18" class="lane"/>
+  <text x="80" y="327" class="section">FIXED INVESTIGATION SEQUENCE</text>
+  <text x="80" y="354" class="box-text">The mock requests the same read-only evidence in the same order.</text>
 
-  <rect x="100" y="465" width="235" height="105" rx="14" class="node"/>
-  <text x="125" y="505" class="box-title">1 · get_order</text>
-  <text x="125" y="534" class="box-text">Order status, items,</text>
-  <text x="125" y="555" class="box-text">and warehouse</text>
+  <rect x="80" y="380" width="210" height="62" rx="12" class="blue"/>
+  <text x="102" y="407" class="box-title">Order + payment</text>
+  <text x="102" y="429" class="small">get_order → get_payment</text>
 
-  <rect x="390" y="465" width="235" height="105" rx="14" class="node"/>
-  <text x="415" y="505" class="box-title">2 · get_payment</text>
-  <text x="415" y="534" class="box-text">Payment status and</text>
-  <text x="415" y="555" class="box-text">transaction ID</text>
+  <rect x="345" y="380" width="210" height="62" rx="12" class="blue"/>
+  <text x="367" y="407" class="box-title">Fulfillment state</text>
+  <text x="367" y="429" class="small">get_fulfillment</text>
 
-  <rect x="680" y="465" width="235" height="105" rx="14" class="node"/>
-  <text x="705" y="505" class="box-title">3 · get_fulfillment</text>
-  <text x="705" y="534" class="box-text">Shipment state and</text>
-  <text x="705" y="555" class="box-text">blocking reason</text>
+  <rect x="610" y="380" width="210" height="62" rx="12" class="blue"/>
+  <text x="632" y="407" class="box-title">Sync evidence</text>
+  <text x="632" y="429" class="small">get_sync_logs</text>
 
-  <rect x="970" y="465" width="235" height="105" rx="14" class="node"/>
-  <text x="995" y="505" class="box-title">4 · get_sync_logs</text>
-  <text x="995" y="534" class="box-text">Latest synchronization</text>
-  <text x="995" y="555" class="box-text">evidence</text>
+  <rect x="875" y="380" width="210" height="62" rx="12" class="blue"/>
+  <text x="897" y="407" class="box-title">Local history</text>
+  <text x="897" y="429" class="small">get_order_audit</text>
 
-  <rect x="1260" y="465" width="235" height="105" rx="14" class="node"/>
-  <text x="1285" y="505" class="box-title">5 · get_order_audit</text>
-  <text x="1285" y="534" class="box-text">Related local SQLite</text>
-  <text x="1285" y="555" class="box-text">history</text>
+  <path d="M290 411 H335" class="line"/>
+  <path d="M555 411 H600" class="line"/>
+  <path d="M820 411 H865" class="line"/>
+  <path d="M700 247 V275 H185 V370" class="dashed"/>
 
-  <path d="M335 518 H382" class="line"/>
-  <path d="M625 518 H672" class="line"/>
-  <path d="M915 518 H962" class="line"/>
-  <path d="M1205 518 H1252" class="line"/>
-  <path d="M855 270 V310 H815 V455" class="line"/>
-  <path d="M1375 455 V310 H1225 V270" class="dashed"/>
-  <text x="1030" y="315" class="small">tool result loop</text>
+  <text x="55" y="520" class="section">RESULT AND OPTIONAL ACTION</text>
+  <rect x="55" y="540" width="250" height="100" rx="14" class="green"/>
+  <text x="80" y="577" class="box-title">Evidence becomes a diagnosis</text>
+  <text x="80" y="604" class="box-text">Findings + structured result</text>
+  <text x="80" y="624" class="small">Returned to the browser</text>
 
-  <text x="70" y="690" class="section">DIAGNOSIS AND OPTIONAL ACTION</text>
-  <rect x="70" y="720" width="350" height="125" rx="16" class="green-node"/>
-  <text x="95" y="760" class="box-title">Mock model evaluates evidence</text>
-  <text x="95" y="789" class="box-text">Known state + explicit action wording</text>
-  <text x="95" y="812" class="small">No general planning claim in mock mode</text>
+  <rect x="365" y="540" width="225" height="100" rx="14" class="orange"/>
+  <text x="390" y="577" class="box-title">Action requested?</text>
+  <text x="390" y="604" class="box-text">retry_sync or create_ticket</text>
+  <text x="390" y="624" class="small">Only on explicit user intent</text>
 
-  <rect x="545" y="720" width="330" height="125" rx="16" class="green-node"/>
-  <text x="570" y="760" class="box-title">No side effect requested</text>
-  <text x="570" y="789" class="box-text">Return diagnosis and findings</text>
-  <text x="570" y="812" class="small">Run status: completed or failed</text>
+  <rect x="650" y="540" width="205" height="100" rx="14" class="orange"/>
+  <text x="675" y="577" class="box-title">Human approval</text>
+  <text x="675" y="604" class="box-text">Approve or reject</text>
+  <text x="675" y="624" class="small">No approval, no side effect</text>
 
-  <rect x="1000" y="720" width="310" height="125" rx="16" class="orange-node"/>
-  <text x="1025" y="760" class="box-title">Action requested</text>
-  <text x="1025" y="789" class="box-text">retry_sync or create_ticket</text>
-  <text x="1025" y="812" class="small">Host validates intent and arguments</text>
+  <rect x="915" y="540" width="230" height="100" rx="14" class="green"/>
+  <text x="940" y="577" class="box-title">Simulated action + audit</text>
+  <text x="940" y="604" class="box-text">Execute once, persist outcome</text>
+  <text x="940" y="624" class="small">SQLite records the run</text>
 
-  <path d="M815 630 V685 H245 V710" class="line"/>
-  <path d="M245 845 V880 H710 V865" class="line"/>
-  <path d="M420 782 H535" class="line"/>
-  <path d="M875 782 H990" class="line"/>
-
-  <rect x="1000" y="900" width="310" height="105" rx="16" class="orange-node"/>
-  <text x="1025" y="938" class="box-title">Human approval gate</text>
-  <text x="1025" y="967" class="box-text">Approve → execute once</text>
-  <text x="1025" y="988" class="box-text">Reject/expire → blocked</text>
-  <path d="M1155 845 V890" class="line"/>
-
-  <rect x="1340" y="720" width="190" height="285" rx="16" class="node"/>
-  <text x="1365" y="760" class="box-title">ToolRegistry</text>
-  <text x="1365" y="792" class="box-text">Pydantic validation</text>
-  <text x="1365" y="820" class="box-text">Mock handlers</text>
-  <text x="1365" y="848" class="box-text">Timeouts</text>
-  <text x="1365" y="876" class="box-text">Read-only retry</text>
-  <text x="1365" y="904" class="box-text">Side effects</text>
-  <text x="1365" y="932" class="small">retry_sync</text>
-  <text x="1365" y="954" class="small">create_ticket</text>
-  <path d="M1310 782 H1330" class="dashed"/>
-  <path d="M1310 952 H1330" class="dashed"/>
-
-  <rect x="545" y="900" width="330" height="105" rx="16" class="green-node"/>
-  <text x="570" y="938" class="box-title">AgentRunResult</text>
-  <text x="570" y="967" class="box-text">Summary · findings · tool calls</text>
-  <text x="570" y="988" class="box-text">approvals · errors · timeline</text>
-  <path d="M710 845 V890" class="line"/>
-
-  <rect x="70" y="900" width="350" height="105" rx="16" class="node"/>
-  <text x="95" y="938" class="box-title">SQLiteRepository</text>
-  <text x="95" y="967" class="box-text">Runs, events, tool calls, approvals</text>
-  <text x="95" y="988" class="small">Audit records persist with the result</text>
-  <path d="M545 952 H430" class="dashed"/>
-  <path d="M875 952 H990" class="dashed"/>
-  <text x="448" y="938" class="small">persist</text>
-
-  <text x="70" y="1040" class="small">Mock actions are simulated in-process. No warehouse, payment, or ticketing system is called.</text>
+  <path d="M185 470 V530" class="line"/>
+  <path d="M305 590 H355" class="line"/>
+  <path d="M590 590 H640" class="orange-line"/>
+  <path d="M855 590 H905" class="orange-line"/>
+  <path d="M365 625 H330 V665 H180 V650" class="dashed"/>
+  <text x="345" y="681" class="small">If no action is requested, return the diagnosis directly.</text>
 </svg>

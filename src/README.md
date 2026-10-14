@@ -9,6 +9,9 @@ and Google's Gemini API. The operational systems are simulated in-process:
 this is not a production integration. Mock mode is intentionally a scripted
 expert walkthrough for the documented scenarios, not general model reasoning.
 
+For the short version of the goals, architecture, and UI test prompts, start
+with [all_you_need_2_know.md](all_you_need_2_know.md).
+
 ## Run locally
 
 Run these commands from the `src` directory:
@@ -84,8 +87,8 @@ knowledge store or agent decision layer.
 
 Workflow diagrams:
 
-- [Deterministic mock workflow](poc-flow-deterministic.svg)
-- [Gemini native tool-calling workflow](poc-flow-gemini.svg)
+- [Deterministic mock: fixed investigation sequence](poc-flow-deterministic.svg)
+- [Gemini mode: model-selected tool loop](poc-flow-gemini.svg)
 
 ## Deterministic mock data
 
