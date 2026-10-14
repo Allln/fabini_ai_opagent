@@ -14,18 +14,30 @@ with [all_you_need_2_know.md](all_you_need_2_know.md).
 
 ## Run locally
 
-Run these commands from the `src` directory:
+Run these commands from the repository root:
 
-```powershell
-py -3.12 -m venv ..\.venv
-..\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+# Create a Python 3.12 virtual environment in src
+Set-Location .\src
+py -3.12 -m venv .venv
+
+# Install the project and development dependencies
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+
+# Create the local environment file
 Copy-Item .env.example .env
-..\.venv\Scripts\python.exe -m app.main
+
+# Run the application
+.\.venv\Scripts\python.exe -m app.main
 ```
 
 Open <http://127.0.0.1:8000>. Mock mode is the default and needs no key or
 network. For a runtime-only install, use
-`python -m pip install -r requirements.txt`.
+`.\.venv\Scripts\python.exe -m pip install -r requirements.txt` from the
+`src` directory.
+
+Unless noted otherwise, the commands below assume the shell is still in the
+`src` directory after the setup block.
 
 ## Gemini mode
 
@@ -184,4 +196,7 @@ Gemini behavior, are in [case_study.md](case_study.md).
 .\.venv\Scripts\mypy app
 ```
 
-Current verified result: 21 tests pass; Ruff lint, formatting, and mypy pass.
+Current verified result on Windows with Python 3.12.10: 21 tests pass, mypy
+passes, and mock mode starts successfully with a healthy `/health` endpoint.
+Ruff currently reports an existing import-formatting issue in
+[app/agent/policy.py](src/app/agent/policy.py).
