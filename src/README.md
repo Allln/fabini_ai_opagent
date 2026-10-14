@@ -63,6 +63,47 @@ auditable and local; the UI is framework-free to keep the demo small.
 The audit trail stores structured events and tool metadata, not hidden
 chain-of-thought.
 
+## Deterministic mock data
+
+Mock mode is fully local and deterministic. It does not call an external order,
+payment, warehouse, or ticketing system. The following records are available
+by order ID:
+
+| Order | Order data | Payment | Fulfillment | Latest sync evidence |
+|---|---|---|---|---|
+| `100245` | paid, 2 items, warehouse `CZ-01` | captured | blocked, reason `sync_error` | `Warehouse API timeout` |
+| `100246` | paid, 1 item, warehouse `CZ-02` | captured | shipped, tracking `CZ123456789` | `Shipment synced` |
+| `100247` | paid, 4 items, warehouse `CZ-03` | captured | shipped, tracking `CZ987654321` | `Shipment synced` |
+| `100248` | paid, 1 item, warehouse `CZ-01` | captured | pending, reason `awaiting_pick` | `Picking not started` |
+
+Any other numeric order ID, for example `123456789`, produces a tool failure
+because the order is not present in the mock data. A request without a numeric
+order ID stops before tool calling and asks for one.
+
+Useful demo requests:
+
+```text
+Investigate order 100245.
+Investigate order 100245 and retry sync if it is blocked.
+Investigate order 100245 and create an incident ticket.
+Investigate order 100246.
+Investigate order 100247.
+Investigate order 100248.
+Investigate order 999999.
+Show me the current warehouse status.
+```
+
+Expected behavior:
+
+- `100245` is the blocked synchronization case; diagnosis is automatic, while
+  `retry_sync` and `create_ticket` pause for approval.
+- `100246` and `100247` are healthy shipped-order cases and should complete
+  without approval.
+- `100248` is pending in picking and should produce evidence without requesting
+  a synchronization retry.
+- `999999` demonstrates an explicit not-found tool failure.
+- The final request demonstrates input handling when no order ID is supplied.
+
 ## Inspect the audit database
 
 After at least one run, the default `fabini.db` contains four related tables:

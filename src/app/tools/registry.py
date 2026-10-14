@@ -52,16 +52,32 @@ MOCK_ORDERS: dict[str, dict[str, Any]] = {
         "items": 1,
         "warehouse": "CZ-02",
     },
+    "100247": {
+        "order_id": "100247",
+        "status": "paid",
+        "items": 4,
+        "warehouse": "CZ-03",
+    },
+    "100248": {
+        "order_id": "100248",
+        "status": "paid",
+        "items": 1,
+        "warehouse": "CZ-01",
+    },
 }
 
 MOCK_PAYMENTS: dict[str, dict[str, Any]] = {
     "100245": {"order_id": "100245", "status": "captured", "transaction_id": "pay-100245"},
     "100246": {"order_id": "100246", "status": "captured", "transaction_id": "pay-100246"},
+    "100247": {"order_id": "100247", "status": "captured", "transaction_id": "pay-100247"},
+    "100248": {"order_id": "100248", "status": "captured", "transaction_id": "pay-100248"},
 }
 
 MOCK_FULFILLMENT: dict[str, dict[str, Any]] = {
     "100245": {"order_id": "100245", "status": "blocked", "reason": "sync_error"},
     "100246": {"order_id": "100246", "status": "shipped", "tracking": "CZ123456789"},
+    "100247": {"order_id": "100247", "status": "shipped", "tracking": "CZ987654321"},
+    "100248": {"order_id": "100248", "status": "pending", "reason": "awaiting_pick"},
 }
 
 MOCK_SYNC_LOGS: dict[str, list[dict[str, Any]]] = {
@@ -71,6 +87,12 @@ MOCK_SYNC_LOGS: dict[str, list[dict[str, Any]]] = {
     ],
     "100246": [
         {"at": "2026-10-14T06:15:00Z", "status": "success", "message": "Shipment synced"},
+    ],
+    "100247": [
+        {"at": "2026-10-14T08:20:00Z", "status": "success", "message": "Shipment synced"},
+    ],
+    "100248": [
+        {"at": "2026-10-14T08:25:00Z", "status": "retryable", "message": "Picking not started"},
     ],
 }
 

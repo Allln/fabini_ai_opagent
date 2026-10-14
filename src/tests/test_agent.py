@@ -63,6 +63,57 @@ def test_side_effect_pauses_then_executes_after_approval() -> None:
     assert [call.name for call in completed.tool_calls][-1] == "retry_sync"
 
 
+def test_healthy_order_returns_shipped_findings_without_approval() -> None:
+    orchestrator = build_orchestrator()
+
+    result = orchestrator.start(RunRequest(request="Investigate order 100247."))
+
+    assert result.status is RunStatus.COMPLETED
+    assert result.approvals == []
+    assert result.findings == [
+        "Fulfillment status is shipped.",
+        "Latest synchronization event: Shipment synced.",
+    ]
+    assert [call.name for call in result.tool_calls] == [
+        "get_order",
+        "get_payment",
+        "get_fulfillment",
+        "get_sync_logs",
+    ]
+
+
+def test_ticket_creation_requires_approval_then_executes() -> None:
+    orchestrator = build_orchestrator()
+
+    waiting = orchestrator.start(
+        RunRequest(request="Investigate order 100245 and create an incident ticket.")
+    )
+
+    assert waiting.status is RunStatus.WAITING_APPROVAL
+    assert waiting.approvals[0].tool_name == "create_ticket"
+
+    completed = orchestrator.resolve_approval(
+        waiting.run_id,
+        waiting.approvals[0].id,
+        "approve",
+    )
+
+    assert completed.status is RunStatus.COMPLETED
+    assert completed.approvals[0].status is ApprovalStatus.EXECUTED
+    assert completed.tool_calls[-1].name == "create_ticket"
+    assert completed.tool_calls[-1].result["status"] == "created"
+
+
+def test_request_without_order_id_stops_before_tool_calling() -> None:
+    orchestrator = build_orchestrator()
+
+    result = orchestrator.start(RunRequest(request="Show me the current warehouse status."))
+
+    assert result.status is RunStatus.COMPLETED
+    assert result.tool_calls == []
+    assert "numeric order ID" in (result.summary or "")
+
+
 def test_rejected_side_effect_is_blocked_without_tool_execution() -> None:
     orchestrator = build_orchestrator()
     waiting = orchestrator.start(
