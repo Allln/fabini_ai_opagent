@@ -33,6 +33,11 @@ The result view also renders a lightweight order-state graph from the same
 structured tool results. It makes the detected order, payment, fulfillment,
 synchronization, and action state readable at a glance.
 
+See the full workflow diagrams:
+
+- [Deterministic mock workflow](poc-flow-deterministic.svg)
+- [Gemini native tool-calling workflow](poc-flow-gemini.svg)
+
 ## Scenario 1 — successful diagnosis, no side effect
 
 **Request:** `Find out why order 100245 was not shipped and suggest next steps.`

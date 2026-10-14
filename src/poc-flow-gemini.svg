@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">FABINI AI Operations Agent Gemini workflow</title>
+  <desc id="desc">A Gemini native function-calling workflow from browser request through FastAPI, the orchestrator, Gemini, validated tools, result loops, approval, SQLite audit, and structured response.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#236b50"/>
+    </marker>
+    <marker id="orange-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#a85e22"/>
+    </marker>
+    <style>
+      .title { font: 800 30px Inter, Arial, sans-serif; fill: #17211d; }
+      .subtitle { font: 16px Inter, Arial, sans-serif; fill: #68736d; }
+      .section { font: 800 13px Inter, Arial, sans-serif; letter-spacing: 2px; fill: #236b50; }
+      .box-title { font: 800 17px Inter, Arial, sans-serif; fill: #17211d; }
+      .box-text { font: 14px Inter, Arial, sans-serif; fill: #68736d; }
+      .small { font: 12px Inter, Arial, sans-serif; fill: #68736d; }
+      .node { fill: #fff; stroke: #dfe5df; stroke-width: 2; }
+      .green-node { fill: #f4f8f3; stroke: #b9d9c1; stroke-width: 2; }
+      .orange-node { fill: #fff8ec; stroke: #ead0a9; stroke-width: 2; }
+      .blue-node { fill: #f1f6fb; stroke: #bdd0e2; stroke-width: 2; }
+      .red-node { fill: #fff5f4; stroke: #e3b5b2; stroke-width: 2; }
+      .lane { fill: #edf4ee; stroke: #c9dccd; stroke-width: 2; stroke-dasharray: 8 8; }
+      .external { fill: #f1f6fb; stroke: #8fb0cf; stroke-width: 2; }
+      .line { fill: none; stroke: #236b50; stroke-width: 3; marker-end: url(#arrow); }
+      .orange-line { fill: none; stroke: #a85e22; stroke-width: 3; marker-end: url(#orange-arrow); }
+      .dashed { fill: none; stroke: #8d9a91; stroke-width: 2; stroke-dasharray: 7 7; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1040" fill="#f5f7f3"/>
+  <text x="70" y="62" class="title">FABINI AI Operations Agent · Gemini Mode</text>
+  <text x="70" y="92" class="subtitle">Model-selected native function calling. The host remains responsible for validation, execution, approval, limits, and persistence.</text>
+
+  <text x="70" y="145" class="section">REQUEST AND MODEL LOOP</text>
+  <rect x="70" y="170" width="230" height="100" rx="16" class="node"/>
+  <text x="95" y="207" class="box-title">Browser UI</text>
+  <text x="95" y="234" class="box-text">Natural-language request</text>
+  <text x="95" y="255" class="small">POST /api/runs</text>
+
+  <rect x="395" y="170" width="230" height="100" rx="16" class="node"/>
+  <text x="420" y="207" class="box-title">FastAPI</text>
+  <text x="420" y="234" class="box-text">Run and approval endpoints</text>
+  <text x="420" y="255" class="small">Structured response to UI</text>
+
+  <rect x="720" y="170" width="270" height="100" rx="16" class="green-node"/>
+  <text x="745" y="207" class="box-title">AgentOrchestrator</text>
+  <text x="745" y="234" class="box-text">Bounded host-controlled loop</text>
+  <text x="745" y="255" class="small">Intent · validation · limits</text>
+
+  <rect x="1085" y="145" width="350" height="150" rx="16" class="external"/>
+  <text x="1110" y="185" class="box-title">GeminiAgentModel</text>
+  <text x="1110" y="214" class="box-text">Google Gemini native function calling</text>
+  <text x="1110" y="244" class="small">System instruction + tool schemas</text>
+  <text x="1110" y="266" class="small">Returns text and/or function calls</text>
+
+  <path d="M300 220 H390" class="line"/>
+  <path d="M625 220 H715" class="line"/>
+  <path d="M990 220 H1075" class="line"/>
+
+  <rect x="70" y="355" width="1460" height="255" rx="20" class="lane"/>
+  <text x="100" y="390" class="section">MODEL-SELECTED TOOL LOOP</text>
+  <text x="100" y="424" class="box-title">Gemini proposes one or more native function calls</text>
+  <text x="100" y="451" class="box-text">The orchestrator validates each call, executes allowed tools, and sends structured results back to Gemini.</text>
+
+  <rect x="100" y="485" width="285" height="90" rx="14" class="blue-node"/>
+  <text x="125" y="522" class="box-title">1 · Function call proposal</text>
+  <text x="125" y="550" class="box-text">Read-only or side-effecting tool</text>
+
+  <rect x="500" y="485" width="285" height="90" rx="14" class="green-node"/>
+  <text x="525" y="522" class="box-title">2 · Host validation</text>
+  <text x="525" y="550" class="box-text">Allow-list + Pydantic arguments</text>
+
+  <rect x="900" y="485" width="285" height="90" rx="14" class="green-node"/>
+  <text x="925" y="522" class="box-title">3 · ToolRegistry</text>
+  <text x="925" y="550" class="box-text">Execute mock tool and record result</text>
+
+  <rect x="1300" y="485" width="185" height="90" rx="14" class="blue-node"/>
+  <text x="1325" y="522" class="box-title">4 · Tool result</text>
+  <text x="1325" y="550" class="box-text">Back to Gemini</text>
+
+  <path d="M385 530 H490" class="line"/>
+  <path d="M785 530 H890" class="line"/>
+  <path d="M1185 530 H1290" class="line"/>
+  <path d="M1390 475 V405 H1245 V305" class="dashed"/>
+  <text x="1245" y="395" class="small">continue until final text or action proposal</text>
+
+  <rect x="70" y="680" width="330" height="130" rx="16" class="green-node"/>
+  <text x="95" y="720" class="box-title">Final model response</text>
+  <text x="95" y="749" class="box-text">Diagnosis and recommended next step</text>
+  <text x="95" y="776" class="small">No side effect proposed</text>
+
+  <rect x="505" y="680" width="340" height="130" rx="16" class="orange-node"/>
+  <text x="530" y="720" class="box-title">Side-effect proposal</text>
+  <text x="530" y="749" class="box-text">retry_sync or create_ticket</text>
+  <text x="530" y="776" class="small">Host checks explicit user intent</text>
+
+  <rect x="950" y="680" width="300" height="130" rx="16" class="orange-node"/>
+  <text x="975" y="720" class="box-title">Human approval gate</text>
+  <text x="975" y="749" class="box-text">Approve → execute once</text>
+  <text x="975" y="776" class="small">Reject/expire → blocked</text>
+
+  <rect x="1350" y="680" width="180" height="130" rx="16" class="red-node"/>
+  <text x="1375" y="720" class="box-title">Unrequested</text>
+  <text x="1375" y="749" class="box-text">proposal rejected</text>
+  <text x="1375" y="776" class="small">No approval created</text>
+
+  <path d="M1240 305 V650 H235 V670" class="line"/>
+  <path d="M1240 305 V640 H675 V670" class="orange-line"/>
+  <path d="M1240 305 V630 H1440 V670" class="orange-line"/>
+  <path d="M845 745 H940" class="orange-line"/>
+
+  <rect x="70" y="875" width="330" height="105" rx="16" class="green-node"/>
+  <text x="95" y="913" class="box-title">AgentRunResult</text>
+  <text x="95" y="942" class="box-text">Summary · findings · steps</text>
+  <text x="95" y="963" class="box-text">tool calls · approvals · errors</text>
+  <path d="M235 810 V865" class="line"/>
+  <path d="M70 927 H45 V220 H60" class="dashed"/>
+  <text x="48" y="570" class="small" transform="rotate(-90 48 570)">response to browser</text>
+
+  <rect x="505" y="875" width="340" height="105" rx="16" class="node"/>
+  <text x="530" y="913" class="box-title">SQLiteRepository</text>
+  <text x="530" y="942" class="box-text">Runs, events, tool calls, approvals</text>
+  <text x="530" y="963" class="small">get_order_audit reads local history</text>
+  <path d="M675 810 V865" class="dashed"/>
+  <path d="M950 927 H855" class="dashed"/>
+
+  <rect x="950" y="875" width="300" height="105" rx="16" class="green-node"/>
+  <text x="975" y="913" class="box-title">Approved action result</text>
+  <text x="975" y="942" class="box-text">Simulated retry or ticket result</text>
+  <text x="975" y="963" class="small">Returned through final run result</text>
+  <path d="M1100 810 V865" class="line"/>
+  <path d="M950 927 H855" class="line"/>
+
+  <text x="505" y="1015" class="small">Gemini behavior is model-dependent; the host controls every executable boundary.</text>
+</svg>
