@@ -1,0 +1,131 @@
+from app.agent.orchestrator import AgentOrchestrator
+from app.config import Settings
+from app.db.repository import SQLiteRepository
+from app.models import ApprovalStatus, RunRequest, RunStatus, ToolCallRequest, ToolCallStatus
+from app.tools.registry import ToolRegistry
+
+
+def build_orchestrator(max_iterations: int = 8) -> AgentOrchestrator:
+    settings = Settings(
+        agent_mode="mock",
+        database_path=":memory:",
+        max_iterations=max_iterations,
+    )
+    return AgentOrchestrator(
+        settings,
+        SQLiteRepository(":memory:"),
+        ToolRegistry(settings.tool_timeout_seconds),
+    )
+
+
+def test_successful_diagnosis_uses_multiple_read_only_tools() -> None:
+    orchestrator = build_orchestrator()
+
+    result = orchestrator.start(
+        RunRequest(request="Find out why order 100245 was not shipped and suggest next steps.")
+    )
+
+    assert result.status is RunStatus.COMPLETED
+    assert [call.name for call in result.tool_calls] == [
+        "get_order",
+        "get_payment",
+        "get_fulfillment",
+        "get_sync_logs",
+    ]
+    assert "synchronization" in (result.summary or "").lower()
+    assert result.findings == [
+        "Fulfillment status is blocked. Reason: sync_error.",
+        "Latest synchronization event: Warehouse API timeout.",
+    ]
+    assert all(call.status is ToolCallStatus.SUCCEEDED for call in result.tool_calls)
+
+
+def test_side_effect_pauses_then_executes_after_approval() -> None:
+    orchestrator = build_orchestrator()
+
+    waiting = orchestrator.start(
+        RunRequest(request="Investigate order 100245 and retry sync if it is blocked.")
+    )
+
+    assert waiting.status is RunStatus.WAITING_APPROVAL
+    approval = waiting.approvals[0]
+    assert approval.status is ApprovalStatus.PENDING
+    assert "retry_sync" not in [call.name for call in waiting.tool_calls]
+
+    completed = orchestrator.resolve_approval(
+        waiting.run_id,
+        approval.id,
+        "approve",
+    )
+
+    assert completed.status is RunStatus.COMPLETED
+    assert completed.approvals[0].status is ApprovalStatus.EXECUTED
+    assert [call.name for call in completed.tool_calls][-1] == "retry_sync"
+
+
+def test_rejected_side_effect_is_blocked_without_tool_execution() -> None:
+    orchestrator = build_orchestrator()
+    waiting = orchestrator.start(
+        RunRequest(request="Investigate order 100245 and retry sync if it is blocked.")
+    )
+
+    result = orchestrator.resolve_approval(
+        waiting.run_id,
+        waiting.approvals[0].id,
+        "reject",
+    )
+
+    assert result.status is RunStatus.BLOCKED
+    assert result.approvals[0].status is ApprovalStatus.REJECTED
+    assert "retry_sync" not in [call.name for call in result.tool_calls]
+
+
+def test_tool_failure_is_recorded_and_returns_safe_result() -> None:
+    orchestrator = build_orchestrator()
+
+    result = orchestrator.start(RunRequest(request="Investigate order 999999."))
+
+    assert result.status is RunStatus.COMPLETED
+    assert result.tool_calls[0].status is ToolCallStatus.FAILED
+    assert "not found" in (result.tool_calls[0].error or "")
+    assert result.errors
+    assert "No operational action" in (result.summary or "")
+
+
+def test_iteration_limit_has_distinct_terminal_status() -> None:
+    orchestrator = build_orchestrator(max_iterations=2)
+
+    result = orchestrator.start(RunRequest(request="Investigate order 100245."))
+
+    assert result.status is RunStatus.LIMIT_REACHED
+    assert result.summary == "The agent stopped at its iteration limit."
+
+
+def test_duplicate_approval_is_idempotent() -> None:
+    orchestrator = build_orchestrator()
+    waiting = orchestrator.start(
+        RunRequest(request="Investigate order 100245 and retry sync if it is blocked.")
+    )
+    approval = waiting.approvals[0]
+
+    first = orchestrator.resolve_approval(waiting.run_id, approval.id, "approve")
+    second = orchestrator.resolve_approval(waiting.run_id, approval.id, "approve")
+
+    assert first.model_dump(mode="json") == second.model_dump(mode="json")
+    assert [call.name for call in second.tool_calls].count("retry_sync") == 1
+
+
+def test_tool_registry_rejects_unknown_or_malformed_calls() -> None:
+    registry = ToolRegistry()
+
+    unknown = registry.execute(
+        ToolCallRequest(name="delete_order", arguments={"order_id": "100245"})
+    )
+    malformed = registry.execute(
+        ToolCallRequest(name="get_order", arguments={"order_id": "not-an-id"})
+    )
+
+    assert not unknown.ok
+    assert "Unknown tool" in (unknown.error or "")
+    assert not malformed.ok
+    assert "Invalid arguments" in (malformed.error or "")

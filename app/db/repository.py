@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from datetime import datetime
+from threading import Lock
+from typing import Any
+from uuid import UUID
+
+from app.models import (
+    AgentRunResult,
+    ApprovalRecord,
+    ApprovalStatus,
+    ToolCallRecord,
+    utc_now,
+)
+
+
+class SQLiteRepository:
+    """Small SQLite repository for run snapshots and append-only audit records."""
+
+    def __init__(self, database_path: str) -> None:
+        self._connection = sqlite3.connect(database_path, check_same_thread=False)
+        self._connection.row_factory = sqlite3.Row
+        self._lock = Lock()
+        self._initialize()
+
+    def _initialize(self) -> None:
+        with self._lock, self._connection:
+            self._connection.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS runs (
+                    run_id TEXT PRIMARY KEY,
+                    request TEXT NOT NULL,
+                    mode TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    result_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS events (
+                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    event_type TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS tool_calls (
+                    call_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    arguments_json TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    result_json TEXT,
+                    error TEXT,
+                    started_at TEXT NOT NULL,
+                    finished_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS approvals (
+                    approval_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL,
+                    action_key TEXT NOT NULL,
+                    tool_name TEXT NOT NULL,
+                    arguments_json TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    resolved_at TEXT
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_approval_action
+                    ON approvals (run_id, action_key);
+                """
+            )
+
+    def create_run(self, result: AgentRunResult) -> None:
+        serialized = json.dumps(result.model_dump(mode="json"))
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO runs
+                (run_id, request, mode, status, result_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(result.run_id),
+                    result.request,
+                    result.mode,
+                    result.status.value,
+                    serialized,
+                    result.created_at.isoformat(),
+                    result.updated_at.isoformat(),
+                ),
+            )
+
+    def save_result(self, result: AgentRunResult) -> None:
+        serialized = json.dumps(result.model_dump(mode="json"))
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                UPDATE runs SET status = ?, result_json = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (
+                    result.status.value,
+                    serialized,
+                    result.updated_at.isoformat(),
+                    str(result.run_id),
+                ),
+            )
+
+    def append_event(
+        self,
+        run_id: UUID,
+        sequence: int,
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> None:
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO events
+                (run_id, sequence, event_type, payload_json, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    str(run_id),
+                    sequence,
+                    event_type,
+                    json.dumps(payload),
+                    utc_now().isoformat(),
+                ),
+            )
+
+    def record_tool_call(self, run_id: UUID, record: ToolCallRecord) -> None:
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT OR REPLACE INTO tool_calls
+                (call_id, run_id, sequence, name, arguments_json, status, result_json,
+                 error, started_at, finished_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.call_id,
+                    str(run_id),
+                    record.sequence,
+                    record.name,
+                    json.dumps(record.arguments),
+                    record.status.value,
+                    json.dumps(record.result) if record.result is not None else None,
+                    record.error,
+                    record.started_at.isoformat(),
+                    record.finished_at.isoformat(),
+                ),
+            )
+
+    def create_approval(self, approval: ApprovalRecord, run_id: UUID) -> None:
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT OR IGNORE INTO approvals
+                (approval_id, run_id, action_key, tool_name, arguments_json, status,
+                 created_at, resolved_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(approval.id),
+                    str(run_id),
+                    approval.action_key,
+                    approval.tool_name,
+                    json.dumps(approval.arguments),
+                    approval.status.value,
+                    approval.created_at.isoformat(),
+                    approval.resolved_at.isoformat() if approval.resolved_at else None,
+                ),
+            )
+
+    def resolve_approval(
+        self,
+        approval_id: UUID,
+        expected_status: ApprovalStatus,
+        status: ApprovalStatus,
+        resolved_at: datetime,
+    ) -> bool:
+        with self._lock, self._connection:
+            cursor = self._connection.execute(
+                """
+                UPDATE approvals SET status = ?, resolved_at = ?
+                WHERE approval_id = ? AND status = ?
+                """,
+                (
+                    status.value,
+                    resolved_at.isoformat(),
+                    str(approval_id),
+                    expected_status.value,
+                ),
+            )
+            return cursor.rowcount == 1
+
+    def get_approval(self, approval_id: UUID) -> ApprovalRecord | None:
+        row = self._connection.execute(
+            "SELECT * FROM approvals WHERE approval_id = ?",
+            (str(approval_id),),
+        ).fetchone()
+        if row is None:
+            return None
+        return ApprovalRecord(
+            id=UUID(row["approval_id"]),
+            action_key=row["action_key"],
+            tool_name=row["tool_name"],
+            arguments=json.loads(row["arguments_json"]),
+            status=ApprovalStatus(row["status"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            resolved_at=(
+                datetime.fromisoformat(row["resolved_at"]) if row["resolved_at"] else None
+            ),
+        )
+
+    def get_result(self, run_id: UUID) -> AgentRunResult | None:
+        row = self._connection.execute(
+            "SELECT result_json FROM runs WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if row is None:
+            return None
+        return AgentRunResult.model_validate(json.loads(row["result_json"]))
+
+    def close(self) -> None:
+        with self._lock:
+            self._connection.close()

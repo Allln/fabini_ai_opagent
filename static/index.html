@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FABINI Operations Agent</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">FABINI / AI OPERATIONS</p>
+          <h1>Investigate an operational issue.</h1>
+          <p class="lede">
+            The agent gathers evidence, records every step, and pauses before any
+            side-effecting action.
+          </p>
+        </div>
+        <span id="mode-badge" class="badge">MOCK MODE</span>
+      </header>
+
+      <section class="card request-card">
+        <div class="card-heading">
+          <div>
+            <p class="eyebrow">NEW RUN</p>
+            <h2>What should I investigate?</h2>
+          </div>
+          <label class="mode-control">
+            Mode
+            <select id="mode">
+              <option value="mock">Deterministic mock</option>
+              <option value="gemini">Google Gemini</option>
+            </select>
+          </label>
+        </div>
+        <div class="examples" aria-label="Example requests">
+          <button data-example="Zjisti, proč objednávka 100245 nebyla expedována, a navrhni další postup.">
+            Diagnose blocked order
+          </button>
+          <button data-example="Zjisti stav objednávky 100245 a pokud je problém v synchronizaci, retry sync.">
+            Diagnose and retry
+          </button>
+          <button data-example="Zjisti, proč objednávka 999999 nebyla expedována.">
+            Show tool failure
+          </button>
+        </div>
+        <form id="run-form">
+          <textarea id="request" required minlength="3" maxlength="2000"
+            placeholder="Example: Find out why order 100245 was not shipped..."></textarea>
+          <div class="form-footer">
+            <span class="hint">Read-only investigation is automatic. Actions always pause for approval.</span>
+            <button class="primary" type="submit">Run investigation <span>→</span></button>
+          </div>
+        </form>
+      </section>
+
+      <section id="result-section" class="result-grid hidden">
+        <div class="card result-card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">RUN RESULT</p>
+              <h2 id="result-title">Waiting for a run</h2>
+            </div>
+            <span id="status-badge" class="status">IDLE</span>
+          </div>
+          <p id="summary" class="summary"></p>
+          <div id="approval-panel"></div>
+          <div class="section-block">
+            <h3>Findings</h3>
+            <ul id="findings" class="plain-list"></ul>
+          </div>
+          <div class="section-block">
+            <h3>Tool calls</h3>
+            <div id="tool-calls" class="tool-list"></div>
+          </div>
+        </div>
+        <aside class="card timeline-card">
+          <p class="eyebrow">AUDIT TRAIL</p>
+          <h2>Decision timeline</h2>
+          <div id="timeline" class="timeline"></div>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

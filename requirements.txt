@@ -1,0 +1,6 @@
+# Runtime dependencies mirrored from pyproject.toml for simple deployment setups.
+fastapi==0.143.0
+google-genai==1.75.0
+pydantic==2.14.1
+pydantic-settings==2.15.0
+uvicorn[standard]==0.54.0

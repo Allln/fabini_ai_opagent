@@ -1,0 +1,50 @@
+# Local Python environments and packaging output
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Test, type-checking, lint, and coverage output
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Local application state and runtime logs
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.log
+*.pid
+*.tmp
+*.temp
+
+# IDE and editor metadata
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
+*.swp
+*.swo
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
