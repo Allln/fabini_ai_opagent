@@ -143,9 +143,11 @@ class MockAgentModel:
         records = audit.get("records", [])
         if not records:
             return "No related local SQLite audit records were found."
+        record_count = audit.get("record_count", len(records))
         return (
             f"Local SQLite audit for order {audit.get('order_id')} contains "
-            f"{len(records)} related records; see Related DB details."
+            f"{record_count} related records; the latest {len(records)} are shown in "
+            "Related DB details."
         )
 
 

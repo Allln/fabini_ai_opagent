@@ -7,6 +7,7 @@ from threading import Lock
 from typing import Any
 from uuid import UUID
 
+from app.config import ORDER_AUDIT_RECORD_LIMIT
 from app.models import (
     AgentRunResult,
     ApprovalRecord,
@@ -68,6 +69,17 @@ class SQLiteRepository:
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_approval_action
                     ON approvals (run_id, action_key);
+                CREATE INDEX IF NOT EXISTS idx_tool_calls_order_timestamp
+                    ON tool_calls (
+                        json_extract(arguments_json, '$.order_id'),
+                        started_at DESC,
+                        sequence DESC
+                    );
+                CREATE INDEX IF NOT EXISTS idx_approvals_order_timestamp
+                    ON approvals (
+                        json_extract(arguments_json, '$.order_id'),
+                        created_at DESC
+                    );
                 """
             )
 
@@ -226,18 +238,29 @@ class SQLiteRepository:
 
     def get_order_audit(self, order_id: str) -> dict[str, Any]:
         records: list[dict[str, Any]] = []
+        tool_call_count = self._connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM tool_calls
+            WHERE json_extract(arguments_json, '$.order_id') = ?
+            """,
+            (order_id,),
+        ).fetchone()[0]
         tool_calls = self._connection.execute(
             """
             SELECT call_id, run_id, sequence, name, arguments_json, status,
-                   result_json, error, started_at, finished_at
+                   CASE WHEN name = 'get_order_audit' THEN NULL ELSE result_json END
+                       AS result_json,
+                   error, started_at, finished_at
             FROM tool_calls
-            ORDER BY started_at, sequence
-            """
+            WHERE json_extract(arguments_json, '$.order_id') = ?
+            ORDER BY started_at DESC, sequence DESC
+            LIMIT ?
+            """,
+            (order_id, ORDER_AUDIT_RECORD_LIMIT),
         )
         for row in tool_calls:
             arguments = json.loads(row["arguments_json"])
-            if arguments.get("order_id") != order_id:
-                continue
             records.append(
                 {
                     "source": "tool_calls",
@@ -254,18 +277,27 @@ class SQLiteRepository:
                 }
             )
 
+        approval_count = self._connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM approvals
+            WHERE json_extract(arguments_json, '$.order_id') = ?
+            """,
+            (order_id,),
+        ).fetchone()[0]
         approvals = self._connection.execute(
             """
             SELECT approval_id, run_id, action_key, tool_name, arguments_json,
                    status, created_at, resolved_at
             FROM approvals
-            ORDER BY created_at
-            """
+            WHERE json_extract(arguments_json, '$.order_id') = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (order_id, ORDER_AUDIT_RECORD_LIMIT),
         )
         for row in approvals:
             arguments = json.loads(row["arguments_json"])
-            if arguments.get("order_id") != order_id:
-                continue
             records.append(
                 {
                     "source": "approvals",
@@ -280,8 +312,21 @@ class SQLiteRepository:
                 }
             )
 
-        records.sort(key=lambda record: record.get("started_at") or record["created_at"])
-        return {"order_id": order_id, "record_count": len(records), "records": records}
+        records.sort(
+            key=lambda record: (
+                record.get("started_at") or record["created_at"],
+                record.get("sequence", -1),
+            ),
+            reverse=True,
+        )
+        record_count = tool_call_count + approval_count
+        latest_records = records[:ORDER_AUDIT_RECORD_LIMIT]
+        return {
+            "order_id": order_id,
+            "record_count": record_count,
+            "returned_record_count": len(latest_records),
+            "records": latest_records,
+        }
 
     def close(self) -> None:
         with self._lock:

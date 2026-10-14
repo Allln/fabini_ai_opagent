@@ -1,13 +1,16 @@
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 from app.agent.orchestrator import AgentOrchestrator
-from app.config import Settings
+from app.config import ORDER_AUDIT_RECORD_LIMIT, Settings
 from app.db.repository import SQLiteRepository
 from app.models import (
     ApprovalStatus,
     ModelTurn,
     RunRequest,
     RunStatus,
+    ToolCallRecord,
     ToolCallRequest,
     ToolCallStatus,
 )
@@ -346,12 +349,65 @@ def test_order_audit_tool_reads_previous_calls_and_approvals(tmp_path) -> None:
 
     assert "Local SQLite audit for order 100245" in (second.summary or "")
     audit_call = next(call for call in second.tool_calls if call.name == "get_order_audit")
-    assert any(
-        record["source"] == "approvals"
-        and record["tool_name"] == "retry_sync"
-        and record["status"] == "executed"
-        for record in (audit_call.result or {}).get("records", [])
+    audit_result = audit_call.result or {}
+    assert audit_result["record_count"] >= audit_result["returned_record_count"]
+    assert len(audit_result["records"]) <= ORDER_AUDIT_RECORD_LIMIT
+
+
+def test_order_audit_returns_only_latest_records() -> None:
+    repository = SQLiteRepository(":memory:")
+    run_id = uuid4()
+    base_time = datetime(2026, 1, 1, tzinfo=UTC)
+
+    for index in range(ORDER_AUDIT_RECORD_LIMIT + 2):
+        started_at = base_time + timedelta(minutes=index)
+        repository.record_tool_call(
+            run_id,
+            ToolCallRecord(
+                call_id=str(uuid4()),
+                sequence=index,
+                name=f"operation_{index}",
+                arguments={"order_id": "100245"},
+                status=ToolCallStatus.SUCCEEDED,
+                result={"index": index},
+                started_at=started_at,
+                finished_at=started_at + timedelta(seconds=1),
+            ),
+        )
+
+    audit = repository.get_order_audit("100245")
+
+    assert audit["record_count"] == ORDER_AUDIT_RECORD_LIMIT + 2
+    assert audit["returned_record_count"] == ORDER_AUDIT_RECORD_LIMIT
+    assert [record["result"]["index"] for record in audit["records"]] == [6, 5, 4, 3, 2]
+
+
+def test_order_audit_does_not_embed_historical_audit_payloads() -> None:
+    repository = SQLiteRepository(":memory:")
+    run_id = uuid4()
+    started_at = datetime(2026, 1, 1, tzinfo=UTC)
+    repository.record_tool_call(
+        run_id,
+        ToolCallRecord(
+            call_id=str(uuid4()),
+            sequence=1,
+            name="get_order_audit",
+            arguments={"order_id": "100245"},
+            status=ToolCallStatus.SUCCEEDED,
+            result={
+                "order_id": "100245",
+                "record_count": 1,
+                "records": [{"result": {"records": ["nested"]}}],
+            },
+            started_at=started_at,
+            finished_at=started_at + timedelta(seconds=1),
+        ),
     )
+
+    audit = repository.get_order_audit("100245")
+
+    assert audit["record_count"] == 1
+    assert audit["records"][0]["result"] is None
 
 
 def test_tool_registry_rejects_unknown_or_malformed_calls() -> None:

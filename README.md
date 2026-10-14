@@ -73,7 +73,11 @@ POC auditable and local; the UI is framework-free to keep the demo small.
 SQLite repository. It returns related historical `tool_calls` and `approvals`
 whose arguments contain that order ID. The final mock-mode diagnosis formats
 those records into the summary, so a request about an order also mentions its
-known local operational history. It is an internal POC audit helper, not a
+known local operational history. To keep the response and browser details view
+bounded, it returns only the five latest related records while preserving the
+total matching record count. Historical audit records are represented without
+their nested result payloads, preventing audit history from recursively
+duplicating itself in SQLite. It is an internal POC audit helper, not a
 replacement for an operational order, payment, fulfillment, or ticket system.
 
 The audit trail stores structured events and tool metadata, not hidden

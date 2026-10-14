@@ -12,6 +12,7 @@ const stateGraphCaption = document.querySelector("#state-graph-caption");
 const stateGraphOrder = document.querySelector("#state-graph-order");
 const stateGraphAudit = document.querySelector("#state-graph-audit");
 let currentResult = null;
+const MAX_VISIBLE_AUDIT_RECORDS = 5;
 
 document.querySelectorAll("[data-example]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -75,7 +76,9 @@ function renderDatabaseDetails(result) {
     return;
   }
   const auditCall = (result.tool_calls || []).find((call) => call.name === "get_order_audit");
-  const records = auditCall?.result?.records || [];
+  const auditResult = auditCall?.result || {};
+  const records = (auditResult.records || []).slice(0, MAX_VISIBLE_AUDIT_RECORDS);
+  const totalRecordCount = auditResult.record_count ?? records.length;
   if (!records.length) {
     dbDetails.innerHTML = "<p class='hint'>No related SQLite records were returned.</p>";
     dbDetails.classList.remove("hidden");
@@ -84,7 +87,7 @@ function renderDatabaseDetails(result) {
   dbDetails.innerHTML = `
     <div class="db-details-heading">
       <h3>Related DB details</h3>
-      <span class="hint">${records.length} record(s)</span>
+      <span class="hint">Showing latest ${records.length} of ${totalRecordCount} record(s)</span>
     </div>
     <div class="table-scroll">
       <table class="db-table">
