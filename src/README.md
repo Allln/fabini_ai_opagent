@@ -147,6 +147,38 @@ Inspect a specific run or use another database:
 For a graphical alternative, open `fabini.db` in any SQLite browser. Do not
 commit the file: local databases are covered by `.gitignore`.
 
+## Reset the local database
+
+Stop the running application before changing the database file. The default
+database is `src\fabini.db`; it contains only local POC runs, events, tool
+calls, approvals, and audit records.
+
+To keep a backup and then start with an empty database, run these commands from
+the `src` directory:
+
+```powershell
+Copy-Item .\fabini.db .\fabini.db.backup -ErrorAction SilentlyContinue
+if (Test-Path .\fabini.db) { Remove-Item .\fabini.db }
+```
+
+Start the application again:
+
+```powershell
+..\.venv\Scripts\python.exe -m app.main
+```
+
+The application recreates the SQLite schema automatically on startup. The
+backup file is not required for runtime and can be removed after confirming
+that the reset was successful:
+
+```powershell
+Remove-Item .\fabini.db.backup -ErrorAction SilentlyContinue
+```
+
+If `DATABASE_PATH` is set in `.env`, back up and remove that configured file
+instead of `.\fabini.db`. Resetting the database permanently removes its
+stored runs and audit history unless a backup was kept.
+
 ## Safety boundaries
 
 - Allow-list and Pydantic validation reject unknown tools and malformed input.
