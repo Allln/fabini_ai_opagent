@@ -16,6 +16,7 @@ with [all_you_need_2_know.md](all_you_need_2_know.md).
 
 Run these commands from the repository root:
 
+```powershell
 # Create a Python 3.12 virtual environment in src
 Set-Location .\src
 py -3.12 -m venv .venv
@@ -207,7 +208,9 @@ Gemini behavior, are in [case_study.md](case_study.md).
 .\.venv\Scripts\mypy app
 ```
 
-Current verified result on Windows with Python 3.12.10: 21 tests pass, mypy
+Current verified result on Windows with Python 3.12.10: 25 tests pass, mypy
 passes, and mock mode starts successfully with a healthy `/health` endpoint.
-Ruff currently reports an existing import-formatting issue in
+Repository-wide Ruff still
+reports existing import-formatting issues in
+[app/agent/adapters.py](src/app/agent/adapters.py) and
 [app/agent/policy.py](src/app/agent/policy.py).

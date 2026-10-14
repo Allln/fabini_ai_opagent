@@ -3,7 +3,7 @@
 ## Short architecture description
 
 FABINI AI Operations Agent is a local POC for investigating
-e-commerce operational issues over mocked dataset (optionally test sandbox api could be used with proper dummy data).
+e-commerce operational issues over a mocked dataset.
 A user submits a natural-language request about
 an order. The agent gathers evidence from typed tools, records the steps and
 tool calls, and returns a structured result. If the agent wants to perform a
@@ -31,12 +31,15 @@ general agent that attempts to operate across every company system.
 
 ### 2. Evidence-first workflow with human approval for actions
 
-The agent first uses the four read-only tools:
+The agent first uses the four operational read-only tools:
 
 - `get_order`
 - `get_payment`
 - `get_fulfillment`
 - `get_sync_logs`
+
+`get_order_audit` is a separate read-only helper for related local SQLite
+history.
 
 The two action tools require an explicit user request and are approval-gated:
 
@@ -258,8 +261,9 @@ local case-study scope:
 
 - **Real integrations:** replace in-process mock handlers with authenticated
   clients test sandbox for order, payment, fulfillment, synchronization, and ticket systems.
-- **Authentication and authorization:** identify users and restrict which
-  people may investigate, approve, or execute each action.
+- **Per-user authorization:** identify users and restrict which people may
+  investigate, approve, or execute each action; the current POC only has a
+  shared optional bearer token for network access.
 - **Durable execution:** move long-running work to a worker and persist enough
   state to resume after a process restart.
 - **Production idempotency:** coordinate action keys with the target systems,
@@ -293,8 +297,8 @@ local case-study scope:
 
 - Implement authenticated integration clients behind the existing tool
   registry.
-- Add authentication, authorization, tenant isolation, and secure secret
-  handling.
+- Strengthen authentication with per-user authorization, tenant isolation, and
+  secure secret handling beyond the shared API bearer token.
 - Add durable background execution and recovery of pending approvals.
 - Add integration-level idempotency and contract tests.
 - Add model evaluation cases and prompt-injection/abuse tests.

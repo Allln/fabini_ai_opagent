@@ -63,8 +63,9 @@ it is allowed to run.
 
 There are seven tools:
 
-- Read-only: `get_order`, `get_payment`, `get_fulfillment`,
-  `get_sync_logs`, `get_order_audit`
+- Operational read-only: `get_order`, `get_payment`, `get_fulfillment`,
+  `get_sync_logs`
+- Audit helper: `get_order_audit`
 - Side-effecting: `retry_sync`, `create_ticket`
 
 Read-only investigation is automatic. Side-effecting tools need both an

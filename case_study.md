@@ -9,7 +9,8 @@
 - **SQLite audit storage:** enough persistence for a local POC without adding
   infrastructure.
 - **Approval for `retry_sync` and `create_ticket`:** both can change external
-  operational state, unlike the four read-only `get_*` tools.
+  operational state, unlike the four operational read-only tools. The separate
+  `get_order_audit` helper reads local SQLite history.
 - **Explicit action intent:** the deterministic walkthrough only requests an
   action when the user explicitly asks for it; the host enforces the same
   policy for Gemini proposals. Negated requests do not trigger approval.
@@ -58,7 +59,7 @@ synchronization timeout. No side effect is called. Covered by
 
 ### Gemini mode — manually observed
 
-Gemini made the same four read-only calls and returned a Czech diagnosis. It
+Gemini made the same four operational read-only calls and returned a Czech diagnosis. It
 recommended retrying synchronization and creating a support ticket, but
 returned neither function call, so no approval was requested. This is an
 observed run, not a guaranteed sequence for every Gemini response.
@@ -77,7 +78,7 @@ approval is idempotent. Covered by the agent and API tests.
 
 ### Gemini mode — manually observed
 
-Gemini made the four read-only calls, returned `retry_sync`, paused at the
+Gemini made the four operational read-only calls, returned `retry_sync`, paused at the
 host-side approval gate, and after approval recorded a successful `retry_sync`
 call. The mock action only returns a simulated result; no warehouse is called.
 
@@ -107,9 +108,11 @@ model-dependent; the iteration limit and audit trail bound and expose it.
 - Mock multi-step diagnosis, approval/rejection, negated intent, batched tool
   calls, invalid action arguments, host-side action-intent enforcement, failure
   handling, iteration limit, duplicate approval protection, Gemini adapter
-  translation, API endpoints, and frontend serving: 21 automated tests
-  pass.
-- Ruff lint and formatting checks pass.
+  translation, API endpoints, frontend serving, and API-token enforcement:
+  25 automated tests pass.
+- Changed-file Ruff checks and application mypy checks pass. Repository-wide
+  Ruff still reports existing import-formatting issues in `adapters.py` and
+  `policy.py`.
 - The three Gemini outcomes above were manually observed with a configured API
   key; they are examples, not deterministic guarantees.
 
