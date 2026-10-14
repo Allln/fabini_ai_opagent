@@ -29,7 +29,7 @@ Set these values in `.env`:
 ```dotenv
 AGENT_MODE=gemini
 GEMINI_API_KEY=your-key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
 Gemini uses native function calling. The host application still validates tool
@@ -51,6 +51,8 @@ manual runs are recorded in [case_study.md](case_study.md).
   and `create_ticket`.
 - [app/db/repository.py](app/db/repository.py) persists runs, events, tool
   calls, and approvals in SQLite.
+- [app/config.py](app/config.py) centralizes runtime defaults and small policy
+  constants, including the Gemini system instruction.
 
 Read-only `get_*` tools run automatically. `retry_sync` and `create_ticket`
 require approval because they have side effects. Mock mode was chosen because

@@ -6,7 +6,7 @@ from typing import Literal
 from uuid import UUID, uuid4
 
 from app.agent.adapters import AgentModel, GeminiAgentModel, MockAgentModel
-from app.config import Settings
+from app.config import APPROVAL_TIMEOUT_MINUTES, Settings
 from app.db.repository import SQLiteRepository
 from app.models import (
     AgentRunResult,
@@ -48,7 +48,7 @@ class AgentOrchestrator:
         self.repository = repository
         self.registry = registry
         self.sessions: dict[UUID, RunSession] = {}
-        self.approval_timeout = timedelta(minutes=15)
+        self.approval_timeout = timedelta(minutes=APPROVAL_TIMEOUT_MINUTES)
 
     def start(self, request: RunRequest) -> AgentRunResult:
         mode = request.mode or self.settings.agent_mode

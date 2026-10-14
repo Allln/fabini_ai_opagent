@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
+from app.config import READ_ONLY_TOOL_MAX_ATTEMPTS
 from app.errors import ToolExecutionError
 from app.models import ToolCallRequest, ToolCallStatus, ToolResult
 
@@ -194,7 +195,7 @@ class ToolRegistry:
                 status=ToolCallStatus.FAILED,
             )
 
-        attempts = 1 if definition.side_effecting else 2
+        attempts = 1 if definition.side_effecting else READ_ONLY_TOOL_MAX_ATTEMPTS
         last_error: str | None = None
         for _attempt in range(attempts):
             executor = ThreadPoolExecutor(max_workers=1)

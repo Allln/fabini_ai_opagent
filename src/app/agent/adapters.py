@@ -5,6 +5,7 @@ from typing import Protocol
 
 from google.genai import errors
 
+from app.config import GEMINI_SYSTEM_INSTRUCTION, GEMINI_TEMPERATURE
 from app.models import ModelTurn, ToolCallRequest, ToolResult
 from app.tools.registry import ToolRegistry
 
@@ -175,14 +176,9 @@ class GeminiAgentModel:
                 model=self._model_name,
                 contents=self._contents,
                 config=self._types.GenerateContentConfig(
-                    system_instruction=(
-                        "You are a cautious operations agent. Investigate using read-only "
-                        "tools first. Use retry_sync or create_ticket only when the user "
-                        "explicitly requests that action; the host application will gate it "
-                        "with approval. Never invent tool results. Give a concise final answer."
-                    ),
+                    system_instruction=GEMINI_SYSTEM_INSTRUCTION,
                     tools=[self._tool],
-                    temperature=0,
+                    temperature=GEMINI_TEMPERATURE,
                 ),
             )
         except errors.APIError as exc:
