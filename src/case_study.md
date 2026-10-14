@@ -11,8 +11,9 @@
 - **Approval for `retry_sync` and `create_ticket`:** both can change external
   operational state, unlike the four read-only `get_*` tools.
 - **Explicit action intent:** the deterministic walkthrough only requests an
-  action when the user explicitly asks for it; negated requests do not trigger
-  approval. Approval is still required before execution.
+  action when the user explicitly asks for it; the host enforces the same
+  policy for Gemini proposals. Negated requests do not trigger approval.
+  Approval is still required before execution.
 - **Bounded orchestration:** allow-listed schemas, per-tool timeout, one retry
   only for read-only tools, iteration limit, and action idempotency prevent
   uncontrolled execution.
@@ -80,8 +81,8 @@ call. The mock action only returns a simulated result; no warehouse is called.
 `get_order(999999)` returns `Order not found for order 999999`. The error is
 recorded, no side effect is attempted, and the adapter returns a safe response
 stating that the investigation could not be completed. The API status is
-`completed` because the adapter returned a final response; it is not a
-successful diagnosis. Covered by
+`failed` because a tool error was recorded; it is not a successful diagnosis.
+Covered by
 `test_tool_failure_is_recorded_and_returns_safe_result`.
 
 ### Gemini mode — manually observed
@@ -95,9 +96,9 @@ model-dependent; the iteration limit and audit trail bound and expose it.
 ## What is verified
 
 - Mock multi-step diagnosis, approval/rejection, negated intent, batched tool
-  calls, invalid action arguments, failure handling, iteration limit, duplicate
-  approval protection, Gemini adapter translation, API endpoints, and frontend
-  serving: 19 automated tests
+  calls, invalid action arguments, host-side action-intent enforcement, failure
+  handling, iteration limit, duplicate approval protection, Gemini adapter
+  translation, API endpoints, and frontend serving: 21 automated tests
   pass.
 - Ruff lint and formatting checks pass.
 - The three Gemini outcomes above were manually observed with a configured API

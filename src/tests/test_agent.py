@@ -92,6 +92,58 @@ def test_negated_side_effect_request_does_not_trigger_approval() -> None:
     ]
 
 
+def test_host_rejects_unrequested_side_effect_proposal() -> None:
+    class UnrequestedActionModel:
+        def start(self, request: str) -> ModelTurn:
+            return ModelTurn(
+                tool_calls=[
+                    ToolCallRequest(
+                        name="retry_sync",
+                        arguments={"order_id": "100245"},
+                    )
+                ]
+            )
+
+        def submit_tool_results(self, results: list) -> ModelTurn:
+            return ModelTurn(text="The action was rejected by the host.")
+
+    orchestrator = build_orchestrator()
+    orchestrator._create_model = lambda _mode: UnrequestedActionModel()
+
+    result = orchestrator.start(RunRequest(request="Investigate order 100245."))
+
+    assert result.status is RunStatus.FAILED
+    assert result.approvals == []
+    assert result.tool_calls[0].status is ToolCallStatus.REJECTED
+    assert "did not explicitly request" in (result.tool_calls[0].error or "")
+
+
+def test_host_allows_explicit_side_effect_proposal_to_reach_approval() -> None:
+    class ExplicitActionModel:
+        def start(self, request: str) -> ModelTurn:
+            return ModelTurn(
+                tool_calls=[
+                    ToolCallRequest(
+                        name="create_ticket",
+                        arguments={"description": "Order 100245 has a synchronization failure."},
+                    )
+                ]
+            )
+
+        def submit_tool_results(self, results: list) -> ModelTurn:
+            return ModelTurn(text="The ticket action was completed.")
+
+    orchestrator = build_orchestrator()
+    orchestrator._create_model = lambda _mode: ExplicitActionModel()
+
+    result = orchestrator.start(
+        RunRequest(request="Investigate order 100245 and create an incident ticket.")
+    )
+
+    assert result.status is RunStatus.WAITING_APPROVAL
+    assert result.approvals[0].tool_name == "create_ticket"
+
+
 def test_batched_tool_calls_resume_in_order_after_approval() -> None:
     class BatchedModel:
         def start(self, request: str) -> ModelTurn:
@@ -109,7 +161,9 @@ def test_batched_tool_calls_resume_in_order_after_approval() -> None:
     orchestrator = build_orchestrator()
     orchestrator._create_model = lambda _mode: BatchedModel()
 
-    waiting = orchestrator.start(RunRequest(request="Run the prepared investigation."))
+    waiting = orchestrator.start(
+        RunRequest(request="Run the prepared investigation and retry synchronization.")
+    )
     completed = orchestrator.resolve_approval(
         waiting.run_id,
         waiting.approvals[0].id,

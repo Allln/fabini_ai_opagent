@@ -6,6 +6,7 @@ from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from app.agent.adapters import AgentModel, GeminiAgentModel, MockAgentModel
+from app.agent.policy import is_explicit_action_request
 from app.config import APPROVAL_TIMEOUT_MINUTES, Settings
 from app.db.repository import SQLiteRepository
 from app.errors import ToolExecutionError
@@ -216,6 +217,23 @@ class AgentOrchestrator:
 
             call = raw_call.model_copy(update={"arguments": arguments})
             action_key = self.registry.action_key(call)
+            if definition.side_effecting and not is_explicit_action_request(
+                session.result.request,
+                call.name,
+            ):
+                result = ToolResult(
+                    name=call.name,
+                    call_id=call.call_id,
+                    ok=False,
+                    error=(
+                        f"{call.name} was rejected because the user did not explicitly "
+                        "request this action"
+                    ),
+                    status=ToolCallStatus.REJECTED,
+                )
+                results.append(result)
+                self._record_tool_failure(session, call, result)
+                continue
             if definition.side_effecting and action_key not in session.used_action_keys:
                 approval = ApprovalRecord(
                     id=uuid4(),

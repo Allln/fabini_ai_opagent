@@ -35,16 +35,19 @@ GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
 Gemini uses native function calling. The host application still validates tool
-names and arguments, records every call, limits iterations, and gates
-side-effecting calls. A missing key produces an explicit failure; it is never
-returned to the browser. Gemini results are model-dependent; the observed
-manual runs are recorded in [case_study.md](case_study.md).
+names and arguments, verifies that side effects were explicitly requested,
+records every call, limits iterations, and gates side-effecting calls. A
+missing key produces an explicit failure; it is never returned to the browser.
+Gemini results are model-dependent; the observed manual runs are recorded in
+[case_study.md](case_study.md).
 
 ## Architecture and decisions
 
 - [app/main.py](app/main.py) exposes the FastAPI API and serves the browser UI.
 - [app/agent/adapters.py](app/agent/adapters.py) provides Gemini and
   deterministic mock adapters behind one interface.
+- [app/agent/policy.py](app/agent/policy.py) centralizes explicit action-intent
+  detection shared by the adapters and host.
 - [app/agent/orchestrator.py](app/agent/orchestrator.py) owns the bounded
   multi-step loop, approvals, idempotency, and structured outcomes.
 - [app/tools/registry.py](app/tools/registry.py) validates and executes the
@@ -58,10 +61,10 @@ manual runs are recorded in [case_study.md](case_study.md).
 
 Read-only `get_*` tools run automatically. `retry_sync` and `create_ticket`
 require an explicit user request and human approval because they have side
-effects. The deterministic mock does not decide whether a retry is worthwhile;
-it recognizes explicit action wording and rejects negated requests. Gemini was
-added to demonstrate real tool calling. SQLite was chosen to keep the POC
-auditable and local; the UI is framework-free to keep the demo small.
+effects. The host enforces this policy for both adapters; the deterministic
+mock additionally provides a reproducible expert walkthrough, while Gemini
+demonstrates real model-selected tool calling. SQLite was chosen to keep the
+POC auditable and local; the UI is framework-free to keep the demo small.
 
 `get_order_audit(order_id)` is a read-only tool backed by the same local
 SQLite repository. It returns related historical `tool_calls` and `approvals`
@@ -141,6 +144,8 @@ commit the file: local databases are covered by `.gitignore`.
 ## Safety boundaries
 
 - Allow-list and Pydantic validation reject unknown tools and malformed input.
+- The host rejects side-effect proposals that the user did not explicitly
+  request; negated requests do not create approvals.
 - Read-only failures may retry once; side-effecting tools never retry
   automatically.
 - `MAX_ITERATIONS` bounds the model/tool loop.
@@ -164,4 +169,4 @@ Gemini behavior, are in [case_study.md](case_study.md).
 .\.venv\Scripts\mypy app
 ```
 
-Current verified result: 19 tests pass; Ruff lint, formatting, and mypy pass.
+Current verified result: 21 tests pass; Ruff lint, formatting, and mypy pass.

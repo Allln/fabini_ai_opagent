@@ -5,6 +5,7 @@ from typing import Any, Protocol
 
 from google.genai import errors
 
+from app.agent.policy import is_explicit_action_request
 from app.config import GEMINI_SYSTEM_INSTRUCTION, GEMINI_TEMPERATURE
 from app.models import ModelTurn, ToolCallRequest, ToolResult
 from app.tools.registry import ToolRegistry
@@ -87,13 +88,9 @@ class MockAgentModel:
             )
         if self._stage == 5:
             self._stage = 6
-            request_lower = self._request.lower()
             fulfillment = self._observations.get("get_fulfillment", {})
             sync_failed = fulfillment.get("status") == "blocked"
-            if sync_failed and self._requests_action(
-                request_lower,
-                ("retry", "resync", "repeat synchronization"),
-            ):
+            if sync_failed and is_explicit_action_request(self._request, "retry_sync"):
                 return ModelTurn(
                     text="The order is blocked by synchronization and a retry is requested.",
                     tool_calls=[
@@ -103,7 +100,7 @@ class MockAgentModel:
                         )
                     ],
                 )
-            if self._requests_action(request_lower, ("ticket", "incident")):
+            if is_explicit_action_request(self._request, "create_ticket"):
                 return ModelTurn(
                     text=(
                         "The evidence supports opening an incident for the synchronization failure."
@@ -122,16 +119,6 @@ class MockAgentModel:
                 )
             return ModelTurn(text=self._diagnosis())
         return ModelTurn(text=self._diagnosis(action_completed=True))
-
-    @staticmethod
-    def _requests_action(request: str, phrases: tuple[str, ...]) -> bool:
-        for phrase in phrases:
-            for match in re.finditer(re.escape(phrase), request):
-                prefix = request[max(0, match.start() - 40) : match.start()]
-                if re.search(r"\b(?:do not|don't|never|not|without|no)\b[^.!?;]{0,30}$", prefix):
-                    continue
-                return True
-        return False
 
     def _diagnosis(self, action_completed: bool = False) -> str:
         order = self._observations.get("get_order", {})
