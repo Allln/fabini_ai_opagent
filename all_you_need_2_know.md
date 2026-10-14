@@ -102,6 +102,7 @@ To try Gemini, set this in `.env`:
 AGENT_MODE=gemini
 GEMINI_API_KEY=your-key
 GEMINI_MODEL=gemini-3.1-flash-lite
+# API_TOKEN=use-a-random-32-character-or-longer-value-for-network-access
 ```
 
 Gemini responses are model-dependent. The mock path is the reproducible one.
@@ -184,8 +185,9 @@ and inspect the summary, findings, tool calls, approval state, and timeline.
 - This is not connected to a real warehouse, payment, order, or ticket system.
 - `retry_sync` only returns a simulated queued response.
 - `create_ticket` only creates an in-process simulated ticket.
-- There is no authentication, authorization, multi-tenant isolation, or
-  production-grade background processing.
+- API routes are unauthenticated for loopback-only local development. Configure
+  a 32+ character `API_TOKEN` for network access; per-user authorization and
+  multi-tenant isolation are not implemented.
 - Pending approvals expire after 15 minutes.
 - Read-only failures can retry once; side effects are never retried
   automatically.

@@ -36,6 +36,11 @@ network. For a runtime-only install, use
 `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` from the
 `src` directory.
 
+The API binds to loopback by default. If you configure a non-loopback
+`APP_HOST`, also set `API_TOKEN` to a random value of at least 32 characters;
+API routes then require `Authorization: Bearer <API_TOKEN>`. Keep the token in
+`.env` and never commit it.
+
 Unless noted otherwise, the commands below assume the shell is still in the
 `src` directory after the setup block.
 
@@ -47,6 +52,7 @@ Set these values in `.env`:
 AGENT_MODE=gemini
 GEMINI_API_KEY=your-key
 GEMINI_MODEL=gemini-3.1-flash-lite
+# API_TOKEN=use-a-random-32-character-or-longer-value-for-network-access
 ```
 
 Gemini uses native function calling. The host application still validates tool

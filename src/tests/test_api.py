@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
@@ -56,3 +57,29 @@ def test_api_approval_endpoint_resumes_pending_action() -> None:
     assert completed.status_code == 200
     assert completed.json()["status"] == "completed"
     assert completed.json()["approvals"][0]["status"] == "executed"
+
+
+def test_network_api_requires_configured_bearer_token() -> None:
+    settings = Settings(
+        agent_mode="mock",
+        database_path=":memory:",
+        app_host="0.0.0.0",
+        api_token="t" * 32,
+    )
+    repository = SQLiteRepository(":memory:")
+    client = TestClient(create_app(settings, repository))
+
+    request = {"request": "Investigate order 100245.", "mode": "mock"}
+    assert client.post("/api/runs", json=request).status_code == 401
+    authorized = client.post(
+        "/api/runs",
+        json=request,
+        headers={"Authorization": "Bearer " + "t" * 32},
+    )
+
+    assert authorized.status_code == 200
+
+
+def test_network_binding_requires_api_token() -> None:
+    with pytest.raises(ValueError, match="API_TOKEN"):
+        Settings(agent_mode="mock", database_path=":memory:", app_host="0.0.0.0")

@@ -1,7 +1,8 @@
 from functools import lru_cache
+from ipaddress import ip_address
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
@@ -48,6 +49,21 @@ class Settings(BaseSettings):
     )
     app_host: str = Field(default=DEFAULT_APP_HOST, validation_alias="APP_HOST")
     app_port: int = Field(default=DEFAULT_APP_PORT, ge=1, le=65535, validation_alias="APP_PORT")
+    api_token: SecretStr | None = Field(default=None, validation_alias="API_TOKEN")
+
+    @model_validator(mode="after")
+    def validate_network_access(self) -> "Settings":
+        host = self.app_host.strip().lower()
+        try:
+            loopback = ip_address(host).is_loopback
+        except ValueError:
+            loopback = host == "localhost"
+
+        if not loopback and self.api_token is None:
+            raise ValueError("API_TOKEN is required when APP_HOST is not loopback")
+        if self.api_token is not None and len(self.api_token.get_secret_value()) < 32:
+            raise ValueError("API_TOKEN must contain at least 32 characters")
+        return self
 
 
 @lru_cache

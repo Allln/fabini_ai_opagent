@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -41,17 +42,42 @@ def create_app(
     )
     application.state.orchestrator = orchestrator
 
+    def require_api_access(
+        authorization: Annotated[str | None, Header()] = None,
+    ) -> None:
+        configured_token = resolved_settings.api_token
+        if configured_token is None:
+            return
+        scheme, _, presented_token = (authorization or "").partition(" ")
+        if (
+            scheme.lower() != "bearer"
+            or not secrets.compare_digest(
+                presented_token,
+                configured_token.get_secret_value(),
+            )
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="A valid bearer token is required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     @application.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "mode": resolved_settings.agent_mode}
 
     @application.post("/api/runs", response_model=AgentRunResult)
-    def start_run(payload: RunRequest) -> AgentRunResult:
+    def start_run(
+        payload: RunRequest,
+        _: None = Depends(require_api_access),
+    ) -> AgentRunResult:
         return orchestrator.start(payload)
 
-
     @application.get("/api/runs/{run_id}", response_model=AgentRunResult)
-    def get_run(run_id: UUID) -> AgentRunResult:
+    def get_run(
+        run_id: UUID,
+        _: None = Depends(require_api_access),
+    ) -> AgentRunResult:
         result = orchestrator.get_result(run_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Run not found")
@@ -65,6 +91,7 @@ def create_app(
         run_id: UUID,
         approval_id: UUID,
         payload: ApprovalDecision,
+        _: None = Depends(require_api_access),
     ) -> AgentRunResult:
         try:
             return orchestrator.resolve_approval(run_id, approval_id, payload.decision)

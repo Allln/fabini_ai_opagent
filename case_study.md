@@ -117,8 +117,10 @@ Mypy passes for the application package.
 
 ## POC limitations
 
-There is no authentication, authorization, real external integration,
-multi-tenant isolation, background worker, or durable resumption of a pending
-model conversation after process loss. A production version would add those
-controls, authenticated integration clients, durable approval state, live
+Loopback-only local development does not require authentication. Network
+access requires a 32+ character `API_TOKEN` and bearer authentication, but
+per-user authorization and multi-tenant isolation are not implemented. There is
+also no real external integration, background worker, or durable resumption of a
+pending model conversation after process loss. A production version would add
+those controls, authenticated integration clients, durable approval state, live
 Gemini contract tests, and integration-level idempotency.

@@ -237,7 +237,9 @@ Start it from the `src` directory:
 Mock mode needs no API key or network access. To use the optional Gemini
 adapter, set `AGENT_MODE=gemini`, `GEMINI_API_KEY`, and optionally
 `GEMINI_MODEL` in `.env`. The host remains responsible for validation and
-approval in both modes.
+approval in both modes. It binds to loopback by default; configure a random
+32+ character `API_TOKEN` before using a non-loopback `APP_HOST`. Protected API
+routes then require a bearer token.
 
 To inspect persisted audit data:
 
